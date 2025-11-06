@@ -7,17 +7,24 @@
 
 #include "g_local.h"
 
-#define SPIDER_FRAME_STAND      0
-#define SPIDER_FRAME_WALK_START         1
-#define SPIDER_FRAME_WALK_END   6
-#define SPIDER_FRAME_RUN_START          7
-#define SPIDER_FRAME_RUN_END    12
-#define SPIDER_FRAME_ATTACK_START       13
-#define SPIDER_FRAME_ATTACK_END 18
-#define SPIDER_FRAME_PAIN_START         19
-#define SPIDER_FRAME_PAIN_END   21
-#define SPIDER_FRAME_DEATH_START        22
-#define SPIDER_FRAME_DEATH_END  28
+#define SPIDER_FRAME_STAND_START        0x00
+#define SPIDER_FRAME_STAND_END          0x36
+#define SPIDER_FRAME_WALK_START         0x37
+#define SPIDER_FRAME_WALK_END           0x40
+#define SPIDER_FRAME_ATTACKA_START      0x41
+#define SPIDER_FRAME_ATTACKA_END        0x4a
+#define SPIDER_FRAME_ATTACKB_START      0x4b
+#define SPIDER_FRAME_ATTACKB_END        0x50
+#define SPIDER_FRAME_RUN_START          0x51
+#define SPIDER_FRAME_RUN_END            0x55
+#define SPIDER_FRAME_ATTACK_FINISH_START        0x63
+#define SPIDER_FRAME_ATTACK_FINISH_END          0x67
+#define SPIDER_FRAME_ATTACK_RECOVER_START       0x68
+#define SPIDER_FRAME_ATTACK_RECOVER_END         0x6e
+#define SPIDER_FRAME_PAIN_START         0x5b
+#define SPIDER_FRAME_PAIN_END           0x62
+#define SPIDER_FRAME_DEATH_START        0x6f
+#define SPIDER_FRAME_DEATH_END          0x7c
 
 static int sound_sight;
 static int sound_search;
@@ -65,65 +72,261 @@ static void spider_claw (edict_t *self)
     T_Damage (self->enemy, self, self, forward, self->enemy->s.origin, vec3_origin, (int)damage, (int)damage, 0, MOD_HIT);
 }
 
+static void spider_idle_loop (edict_t *self);
+static void spider_select_locomotion (edict_t *self);
+static void spider_combo_entry (edict_t *self);
+static void spider_attack_link (edict_t *self);
+static void spider_begin_recover (edict_t *self);
+static void spider_attack_recover_end (edict_t *self);
+
 static mframe_t spider_frames_stand[] = {
-    {ai_stand, 0, spider_idle}
+    {ai_stand, 0, spider_idle},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, spider_idle},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, spider_idle},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, spider_idle},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, spider_idle},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, spider_idle},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, spider_idle},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL},
+    {ai_stand, 0, NULL}
 };
-static mmove_t spider_move_stand = {SPIDER_FRAME_STAND, SPIDER_FRAME_STAND, spider_frames_stand, NULL};
+static mmove_t spider_move_stand = {
+    SPIDER_FRAME_STAND_START, SPIDER_FRAME_STAND_END, spider_frames_stand, spider_idle_loop
+};
 
 static mframe_t spider_frames_walk[] = {
-    {ai_walk, 6, spider_step},
+    {ai_walk, 10, spider_step},
     {ai_walk, 4, NULL},
-    {ai_walk, 6, spider_step},
+    {ai_walk, 12, spider_step},
     {ai_walk, 4, NULL},
-    {ai_walk, 6, spider_step},
-    {ai_walk, 4, NULL}
+    {ai_walk, 10, spider_step},
+    {ai_walk, 4, NULL},
+    {ai_walk, 12, spider_step},
+    {ai_walk, 4, NULL},
+    {ai_walk, 10, spider_step},
+    {ai_walk, 0, NULL}
 };
-static mmove_t spider_move_walk = {SPIDER_FRAME_WALK_START, SPIDER_FRAME_WALK_END, spider_frames_walk, NULL};
+static mmove_t spider_move_walk = {
+    SPIDER_FRAME_WALK_START, SPIDER_FRAME_WALK_END, spider_frames_walk, spider_select_locomotion
+};
 
 static mframe_t spider_frames_run[] = {
-    {ai_run, 10, spider_step},
-    {ai_run, 6, NULL},
-    {ai_run, 10, spider_step},
-    {ai_run, 6, NULL},
-    {ai_run, 10, spider_step},
-    {ai_run, 6, NULL}
+    {ai_run, 24, spider_step},
+    {ai_run, 10, NULL},
+    {ai_run, 24, spider_step},
+    {ai_run, 10, NULL},
+    {ai_run, 24, spider_step}
 };
-static mmove_t spider_move_run = {SPIDER_FRAME_RUN_START, SPIDER_FRAME_RUN_END, spider_frames_run, NULL};
+static mmove_t spider_move_run = {
+    SPIDER_FRAME_RUN_START, SPIDER_FRAME_RUN_END, spider_frames_run, spider_select_locomotion
+};
 
-static mframe_t spider_frames_attack[] = {
+static mframe_t spider_frames_attack_primary[] = {
+    {ai_charge, 0, NULL},
     {ai_charge, 0, spider_claw},
+    {ai_charge, 0, NULL},
+    {ai_charge, 0, spider_claw},
+    {ai_charge, 0, NULL},
+    {ai_charge, 0, spider_claw},
+    {ai_charge, 0, NULL},
+    {ai_charge, 0, NULL},
+    {ai_charge, 0, spider_claw},
+    {ai_charge, 0, NULL}
+};
+static mmove_t spider_move_attack_primary = {
+    SPIDER_FRAME_ATTACKA_START, SPIDER_FRAME_ATTACKA_END, spider_frames_attack_primary, spider_attack_link
+};
+
+static mframe_t spider_frames_attack_secondary[] = {
+    {ai_charge, 0, NULL},
+    {ai_charge, 0, spider_claw},
+    {ai_charge, 0, NULL},
+    {ai_charge, 0, spider_claw},
+    {ai_charge, 0, NULL},
+    {ai_charge, 0, spider_claw}
+};
+static mmove_t spider_move_attack_secondary = {
+    SPIDER_FRAME_ATTACKB_START, SPIDER_FRAME_ATTACKB_END, spider_frames_attack_secondary, spider_attack_link
+};
+
+static mframe_t spider_frames_attack_finisher[] = {
     {ai_charge, 0, NULL},
     {ai_charge, 0, spider_claw},
     {ai_charge, 0, NULL},
     {ai_charge, 0, spider_claw},
     {ai_charge, 0, NULL}
 };
-static mmove_t spider_move_attack = {SPIDER_FRAME_ATTACK_START, SPIDER_FRAME_ATTACK_END, spider_frames_attack, NULL};
+static mmove_t spider_move_attack_finisher = {
+    SPIDER_FRAME_ATTACK_FINISH_START, SPIDER_FRAME_ATTACK_FINISH_END, spider_frames_attack_finisher, spider_begin_recover
+};
+
+static mframe_t spider_frames_attack_recover[] = {
+    {ai_move, 0, NULL},
+    {ai_move, 0, NULL},
+    {ai_move, 0, NULL},
+    {ai_move, 0, NULL},
+    {ai_move, 0, NULL},
+    {ai_move, 0, NULL},
+    {ai_move, 0, NULL}
+};
+static mmove_t spider_move_attack_recover = {
+    SPIDER_FRAME_ATTACK_RECOVER_START, SPIDER_FRAME_ATTACK_RECOVER_END, spider_frames_attack_recover, spider_attack_recover_end
+};
+
+static void spider_idle_loop (edict_t *self)
+{
+    self->monsterinfo.currentmove = &spider_move_stand;
+}
 
 static void spider_stand (edict_t *self)
 {
     self->monsterinfo.currentmove = &spider_move_stand;
 }
 
+static void spider_select_locomotion (edict_t *self)
+{
+    if ((self->monsterinfo.aiflags & AI_STAND_GROUND) || !self->enemy)
+    {
+        spider_stand (self);
+        return;
+    }
+
+    if (range (self, self->enemy) > RANGE_MELEE)
+    {
+        if (random () > 0.35f)
+            self->monsterinfo.currentmove = &spider_move_run;
+        else
+            self->monsterinfo.currentmove = &spider_move_walk;
+    }
+    else
+    {
+        if (random () > 0.5f)
+            self->monsterinfo.currentmove = &spider_move_attack_primary;
+        else
+            self->monsterinfo.currentmove = &spider_move_attack_secondary;
+    }
+}
+
 static void spider_walk (edict_t *self)
 {
-    self->monsterinfo.currentmove = &spider_move_walk;
+    spider_select_locomotion (self);
 }
 
 static void spider_run (edict_t *self)
 {
-    self->monsterinfo.currentmove = &spider_move_run;
+    spider_select_locomotion (self);
 }
 
 static void spider_attack (edict_t *self)
 {
-    self->monsterinfo.currentmove = &spider_move_attack;
-    self->monsterinfo.attack_finished = level.time + 1.0f;
+    spider_combo_entry (self);
+}
+
+static void spider_combo_entry (edict_t *self)
+{
+    if (!self->enemy)
+    {
+        spider_stand (self);
+        return;
+    }
+
+    if (self->monsterinfo.lefty > 0)
+    {
+        self->monsterinfo.currentmove = &spider_move_attack_finisher;
+        return;
+    }
+
+    if (random () > 0.5f)
+        self->monsterinfo.currentmove = &spider_move_attack_primary;
+    else
+        self->monsterinfo.currentmove = &spider_move_attack_secondary;
+
+    self->monsterinfo.lefty = 1;
+}
+
+static void spider_attack_link (edict_t *self)
+{
+    if (self->enemy && range (self, self->enemy) <= RANGE_MELEE && random () > 0.4f)
+    {
+        self->monsterinfo.currentmove = &spider_move_attack_finisher;
+        return;
+    }
+
+    spider_begin_recover (self);
+}
+
+static void spider_begin_recover (edict_t *self)
+{
+    self->monsterinfo.currentmove = &spider_move_attack_recover;
+}
+
+static void spider_attack_recover_end (edict_t *self)
+{
+    self->monsterinfo.lefty = 0;
+    self->monsterinfo.attack_finished = level.time + 1.0f + random () * 0.4f;
+
+    if (self->monsterinfo.aiflags & AI_STAND_GROUND)
+        spider_stand (self);
+    else if (self->enemy && range (self, self->enemy) <= RANGE_MELEE && random () > 0.6f)
+        self->monsterinfo.currentmove = &spider_move_attack_secondary;
+    else
+        spider_select_locomotion (self);
 }
 
 static void spider_pain (edict_t *self, edict_t *other, float kick, int damage)
 {
     static mframe_t pain_frames[] = {
+        {ai_move, 0, NULL},
+        {ai_move, 0, NULL},
+        {ai_move, 0, NULL},
+        {ai_move, 0, NULL},
+        {ai_move, 0, NULL},
         {ai_move, 0, NULL},
         {ai_move, 0, NULL},
         {ai_move, 0, NULL}
@@ -149,6 +352,13 @@ static void spider_die (edict_t *self, edict_t *inflictor, edict_t *attacker, in
     static mframe_t death_frames[] = {
         {ai_move, 0, NULL},
         {ai_move, 0, NULL},
+        {ai_move, 0, NULL},
+        {ai_move, 0, NULL},
+        {ai_move, 0, NULL},
+        {ai_move, 0, NULL},
+        {ai_move, 0, NULL},
+        {ai_move, 0, NULL},
+        {ai_move, 0, spider_dead},
         {ai_move, 0, spider_dead},
         {ai_move, 0, spider_dead},
         {ai_move, 0, spider_dead},
@@ -205,6 +415,7 @@ void SP_monster_spider (edict_t *self)
     self->die = spider_die;
 
     self->monsterinfo.stand = spider_stand;
+    self->monsterinfo.idle = spider_stand;
     self->monsterinfo.walk = spider_walk;
     self->monsterinfo.run = spider_run;
     self->monsterinfo.attack = spider_attack;
