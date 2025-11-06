@@ -1600,7 +1600,9 @@ void ClientThink (edict_t *ent, usercmd_t *ucmd)
 		// set up for pmove
 		memset (&pm, 0, sizeof(pm));
 
-		if (ent->movetype == MOVETYPE_NOCLIP)
+		if (client->camera && client->camera_freeze && client->camera->camera_state && client->camera->camera_state->active)
+			client->ps.pmove.pm_type = PM_FREEZE;
+		else if (ent->movetype == MOVETYPE_NOCLIP)
 			client->ps.pmove.pm_type = PM_SPECTATOR;
 		else if (ent->s.modelindex != 255)
 			client->ps.pmove.pm_type = PM_GIB;
