@@ -191,11 +191,13 @@ GAME_OBJS = \
 	$(BUILDDIR)/game/g_svcmds.o \
 	$(BUILDDIR)/game/g_combat.o \
 	$(BUILDDIR)/game/g_func.o \
+	$(BUILDDIR)/game/g_camera.o \
 	$(BUILDDIR)/game/g_items.o \
 	$(BUILDDIR)/game/g_main.o \
 	$(BUILDDIR)/game/g_misc.o \
 	$(BUILDDIR)/game/g_monster.o \
 	$(BUILDDIR)/game/g_phys.o \
+	$(BUILDDIR)/game/g_rtrain.o \
 	$(BUILDDIR)/game/g_save.o \
 	$(BUILDDIR)/game/g_spawn.o \
 	$(BUILDDIR)/game/g_target.o \
@@ -254,6 +256,9 @@ $(BUILDDIR)/game/g_combat.o :    $(GAME_DIR)/g_combat.c
 $(BUILDDIR)/game/g_func.o :      $(GAME_DIR)/g_func.c
 	$(DO_SHLIB_CC)
 
+$(BUILDDIR)/game/g_camera.o :    $(GAME_DIR)/g_camera.c
+	$(DO_SHLIB_CC)
+
 $(BUILDDIR)/game/g_items.o :     $(GAME_DIR)/g_items.c
 	$(DO_SHLIB_CC)
 
@@ -267,6 +272,9 @@ $(BUILDDIR)/game/g_monster.o :   $(GAME_DIR)/g_monster.c
 	$(DO_SHLIB_CC)
 
 $(BUILDDIR)/game/g_phys.o :      $(GAME_DIR)/g_phys.c
+	$(DO_SHLIB_CC)
+
+$(BUILDDIR)/game/g_rtrain.o :    $(GAME_DIR)/g_rtrain.c
 	$(DO_SHLIB_CC)
 
 $(BUILDDIR)/game/g_save.o :      $(GAME_DIR)/g_save.c

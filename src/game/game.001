@@ -296,7 +296,34 @@ DEP_CPP_G_FUN=\
 	".\q_shared.h"\
 	
 
-!ENDIF 
+!ENDIF
+
+# End Source File
+# Begin Source File
+
+SOURCE=.\g_camera.c
+
+!IF  "$(CFG)" == "game - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "game - Win32 Debug"
+
+!ELSEIF  "$(CFG)" == "game - Win32 Debug Alpha"
+
+DEP_CPP_G_CAM=\
+        ".\g_local.h"\
+        ".\game.h"\
+        ".\q_shared.h"\
+
+
+!ELSEIF  "$(CFG)" == "game - Win32 Release Alpha"
+
+DEP_CPP_G_CAM=\
+        ".\g_local.h"\
+        ".\game.h"\
+        ".\q_shared.h"\
+
+
+!ENDIF
 
 # End Source File
 # Begin Source File
@@ -459,7 +486,34 @@ DEP_CPP_G_PHY=\
 	".\q_shared.h"\
 	
 
-!ENDIF 
+!ENDIF
+
+# End Source File
+# Begin Source File
+
+SOURCE=.\g_rtrain.c
+
+!IF  "$(CFG)" == "game - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "game - Win32 Debug"
+
+!ELSEIF  "$(CFG)" == "game - Win32 Debug Alpha"
+
+DEP_CPP_G_RTR=\
+        ".\g_local.h"\
+        ".\game.h"\
+        ".\q_shared.h"\
+
+
+!ELSEIF  "$(CFG)" == "game - Win32 Release Alpha"
+
+DEP_CPP_G_RTR=\
+        ".\g_local.h"\
+        ".\game.h"\
+        ".\q_shared.h"\
+
+
+!ENDIF
 
 # End Source File
 # Begin Source File

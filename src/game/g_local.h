@@ -27,6 +27,24 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define	GAME_INCLUDE
 #include "game.h"
 
+struct edict_s;
+
+typedef struct edict_oblivion_ext_s
+{
+        struct edict_s *controller;
+        struct edict_s *last_controller;
+        struct edict_s *prev_path;
+        int                     mission_timer_remaining;
+        int                     mission_timer_limit;
+        int                     mission_timer_cooldown;
+        int                     mission_state;
+        vec3_t          mission_origin;
+        vec3_t          mission_angles;
+        vec3_t          mission_velocity;
+        float           mission_blend;
+        float           mission_radius;
+} edict_oblivion_ext_t;
+
 // the "gameversion" client command will print this plus compile date
 #define	GAMEVERSION	"baseq2"
 
@@ -366,6 +384,9 @@ typedef struct
 	float		maxpitch;
 } spawn_temp_t;
 
+
+typedef struct camera_state_s camera_state_t;
+typedef struct rotate_train_state_s rotate_train_state_t;
 
 typedef struct
 {
@@ -778,6 +799,8 @@ qboolean SV_FilterPacket (char *from);
 // p_view.c
 //
 void ClientEndServerFrame (edict_t *ent);
+void Camera_ClientPreFrame (edict_t *ent);
+void Camera_ClientPostFrame (edict_t *ent);
 
 //
 // p_hud.c
@@ -972,6 +995,10 @@ struct gclient_s
 		edict_t *turret;		// active RTDU turret entity
 		float	next_use_time;		// debounce between deploy / recall
 	} rtdu;
+  
+	edict_t		*camera;		// active cutscene camera
+	qboolean	camera_freeze;		// freeze movement while camera active
+	float		camera_endtime;		// when camera should release view
 };
 
 
@@ -1094,6 +1121,9 @@ struct edict_s
 	edict_t		*mynoise;		// can go in client only
 	edict_t		*mynoise2;
 
+	camera_state_t	*camera_state;
+	rotate_train_state_t	*rotate_train;
+
 	int			noise_index;
 	int			noise_index2;
 	float		volume;
@@ -1103,6 +1133,11 @@ struct edict_s
 	float		wait;
 	float		delay;			// before firing targets
 	float		random;
+
+	float		duration;		// per-entity travel duration override
+	vec3_t	rotate;		// rotation delta or absolute angles
+	vec3_t	rotate_speed;	// angular speed overrides
+	vec3_t	duration_vector;	// axis-specific durations (optional)
 
 	float		teleport_time;
 
@@ -1120,6 +1155,7 @@ struct edict_s
 	gitem_t		*item;			// for bonus items
 
 	// common data blocks
+	edict_oblivion_ext_t	oblivion;
 	moveinfo_t		moveinfo;
 	monsterinfo_t	monsterinfo;
 };

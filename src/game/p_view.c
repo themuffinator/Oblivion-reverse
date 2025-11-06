@@ -963,6 +963,8 @@ void ClientEndServerFrame (edict_t *ent)
 	current_player = ent;
 	current_client = ent->client;
 
+	Camera_ClientPreFrame(ent);
+
 	//
 	// If the origin or velocity have changed since ClientThink(),
 	// update the pmove values.  This will happen when the client
@@ -1069,6 +1071,8 @@ void ClientEndServerFrame (edict_t *ent)
 	G_SetClientSound (ent);
 
 	G_SetClientFrame (ent);
+
+	Camera_ClientPostFrame(ent);
 
 	VectorCopy (ent->velocity, ent->client->oldvelocity);
 	VectorCopy (ent->client->ps.viewangles, ent->client->oldviewangles);

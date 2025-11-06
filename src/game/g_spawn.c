@@ -45,6 +45,7 @@ void SP_func_door_secret (edict_t *ent);
 void SP_func_door_rotating (edict_t *ent);
 void SP_func_water (edict_t *ent);
 void SP_func_train (edict_t *ent);
+void SP_func_rotate_train (edict_t *ent);
 void SP_func_conveyor (edict_t *self);
 void SP_func_wall (edict_t *self);
 void SP_func_object (edict_t *self);
@@ -65,6 +66,7 @@ void SP_trigger_counter (edict_t *ent);
 void SP_trigger_elevator (edict_t *ent);
 void SP_trigger_gravity (edict_t *ent);
 void SP_trigger_monsterjump (edict_t *ent);
+void SP_trigger_misc_camera (edict_t *ent);
 
 void SP_target_temp_entity (edict_t *ent);
 void SP_target_speaker (edict_t *ent);
@@ -105,6 +107,8 @@ void SP_misc_gib_leg (edict_t *self);
 void SP_misc_gib_head (edict_t *self);
 void SP_misc_insane (edict_t *self);
 void SP_misc_deadsoldier (edict_t *self);
+void SP_misc_camera (edict_t *self);
+void SP_misc_camera_target (edict_t *self);
 void SP_misc_viper (edict_t *self);
 void SP_misc_viper_bomb (edict_t *self);
 void SP_misc_bigviper (edict_t *self);
@@ -123,6 +127,10 @@ void SP_monster_infantry (edict_t *self);
 void SP_monster_soldier_light (edict_t *self);
 void SP_monster_soldier (edict_t *self);
 void SP_monster_soldier_ss (edict_t *self);
+void SP_monster_soldier_deatom (edict_t *self);
+void SP_monster_cyborg (edict_t *self);
+void SP_monster_kigrax (edict_t *self);
+void SP_monster_spider (edict_t *self);
 void SP_monster_tank (edict_t *self);
 void SP_monster_medic (edict_t *self);
 void SP_monster_flipper (edict_t *self);
@@ -163,6 +171,7 @@ spawn_t	spawns[] = {
 	{"func_door_rotating", SP_func_door_rotating},
 	{"func_rotating", SP_func_rotating},
 	{"func_train", SP_func_train},
+	{"func_rotate_train", SP_func_rotate_train},
 	{"func_water", SP_func_water},
 	{"func_conveyor", SP_func_conveyor},
 	{"func_areaportal", SP_func_areaportal},
@@ -184,6 +193,7 @@ spawn_t	spawns[] = {
 	{"trigger_elevator", SP_trigger_elevator},
 	{"trigger_gravity", SP_trigger_gravity},
 	{"trigger_monsterjump", SP_trigger_monsterjump},
+	{"trigger_misc_camera", SP_trigger_misc_camera},
 
 	{"target_temp_entity", SP_target_temp_entity},
 	{"target_speaker", SP_target_speaker},
@@ -225,6 +235,8 @@ spawn_t	spawns[] = {
 	{"misc_gib_head", SP_misc_gib_head},
 	{"misc_insane", SP_misc_insane},
 	{"misc_deadsoldier", SP_misc_deadsoldier},
+	{"misc_camera", SP_misc_camera},
+	{"misc_camera_target", SP_misc_camera_target},
 	{"misc_viper", SP_misc_viper},
 	{"misc_viper_bomb", SP_misc_viper_bomb},
 	{"misc_bigviper", SP_misc_bigviper},
@@ -240,9 +252,13 @@ spawn_t	spawns[] = {
 	{"monster_gladiator", SP_monster_gladiator},
 	{"monster_gunner", SP_monster_gunner},
 	{"monster_infantry", SP_monster_infantry},
-	{"monster_soldier_light", SP_monster_soldier_light},
-	{"monster_soldier", SP_monster_soldier},
-	{"monster_soldier_ss", SP_monster_soldier_ss},
+        {"monster_soldier_light", SP_monster_soldier_light},
+        {"monster_soldier", SP_monster_soldier},
+        {"monster_soldier_ss", SP_monster_soldier_ss},
+        {"monster_soldier_deatom", SP_monster_soldier_deatom},
+        {"monster_cyborg", SP_monster_cyborg},
+        {"monster_kigrax", SP_monster_kigrax},
+        {"monster_spider", SP_monster_spider},
 	{"monster_tank", SP_monster_tank},
 	{"monster_tank_commander", SP_monster_tank},
 	{"monster_medic", SP_monster_medic},
