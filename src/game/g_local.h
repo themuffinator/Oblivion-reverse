@@ -165,6 +165,7 @@ typedef enum
 #define AI_COMBAT_POINT			0x00001000
 #define AI_MEDIC				0x00002000
 #define AI_RESURRECTING			0x00004000
+#define AI_FLOAT				0x00008000
 
 //monster attack state
 #define AS_STRAIGHT				1
@@ -225,6 +226,8 @@ MOVETYPE_BOUNCE
 } movetype_t;
 
 
+
+typedef struct mission_state_s mission_state_t;
 
 typedef struct
 {
@@ -295,6 +298,40 @@ typedef struct gitem_s
 } gitem_t;
 
 
+
+// Mission system state tracking
+
+typedef enum
+{
+        MISSION_OBJECTIVE_INACTIVE = 0,
+        MISSION_OBJECTIVE_ACTIVE,
+        MISSION_OBJECTIVE_COMPLETED,
+        MISSION_OBJECTIVE_FAILED
+} mission_objective_state_t;
+
+typedef struct mission_objective_save_s
+{
+        char                    id[32];
+        char                    title[64];
+        char                    text[256];
+        mission_objective_state_t       state;
+        int                     timer_limit;
+        int                     timer_remaining;
+        qboolean                primary;
+        qboolean                persistent;
+        vec3_t                  origin;
+        vec3_t                  angles;
+        float                   radius;
+} mission_objective_save_t;
+
+#define MAX_MISSION_OBJECTIVES 8
+
+typedef struct mission_state_s
+{
+        mission_objective_save_t        objectives[MAX_MISSION_OBJECTIVES];
+        int                             objective_count;
+        int                             unread_events;
+} mission_state_t;
 
 //
 // this structure is left intact through an entire game
@@ -402,40 +439,31 @@ typedef struct
 	float		maxpitch;
 } spawn_temp_t;
 
-typedef enum
+typedef struct camera_state_s
 {
-        MISSION_OBJECTIVE_INACTIVE = 0,
-        MISSION_OBJECTIVE_ACTIVE,
-        MISSION_OBJECTIVE_COMPLETED,
-        MISSION_OBJECTIVE_FAILED
-} mission_objective_state_t;
+        qboolean        active;
+        qboolean        freeze_players;
+        float           default_wait;
+        float           wait_override;
+        float           stop_time;      // 0 = indefinite
+        float           speed;
+        float           duration;
+        edict_t         *initial_corner;
+        edict_t         *current_corner;
+        edict_t         *target_corner;
+        edict_t         *focus;         // static look target
+        edict_t         *track;         // dynamic entity to look at
+        edict_t         *activator;
+        float           move_start_time;
+        float           move_duration;
+        vec3_t          move_start;
+        vec3_t          move_end;
+        vec3_t          start_angles;
+        vec3_t          end_angles;
+        qboolean        has_angle_goal;
+        int             sound_loop;
+} camera_state_t;
 
-typedef struct
-{
-        char                    id[32];
-        char                    title[64];
-        char                    text[256];
-        mission_objective_state_t       state;
-        int                     timer_limit;
-        int                     timer_remaining;
-        qboolean                primary;
-        qboolean                persistent;
-        vec3_t                  origin;
-        vec3_t                  angles;
-        float                   radius;
-} mission_objective_save_t;
-
-#define MAX_MISSION_OBJECTIVES 8
-
-typedef struct
-{
-        mission_objective_save_t        objectives[MAX_MISSION_OBJECTIVES];
-        int                             objective_count;
-        int                             unread_events;
-} mission_state_t;
-
-
-typedef struct camera_state_s camera_state_t;
 typedef struct rotate_train_state_s rotate_train_state_t;
 
 typedef struct
@@ -490,6 +518,7 @@ typedef struct
 	int			aiflags;
 	int			nextframe;
 	float		scale;
+	float		speed;
 
 	void		(*stand)(edict_t *self);
 	void		(*idle)(edict_t *self);
@@ -516,6 +545,7 @@ typedef struct
 
 	int			power_armor_type;
 	int			power_armor_power;
+	float		max_ideal_distance;
 } monsterinfo_t;
 
 
@@ -820,6 +850,7 @@ void AI_SetSightClient (void);
 void ai_stand (edict_t *self, float dist);
 void ai_move (edict_t *self, float dist);
 void ai_walk (edict_t *self, float dist);
+void ai_fly (edict_t *self, float dist);
 void ai_turn (edict_t *self, float dist);
 void ai_run (edict_t *self, float dist);
 void ai_charge (edict_t *self, float dist);
