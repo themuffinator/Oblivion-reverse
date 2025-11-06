@@ -120,8 +120,13 @@ typedef enum
 	AMMO_SHELLS,
 	AMMO_ROCKETS,
 	AMMO_GRENADES,
+	AMMO_MINES,
 	AMMO_CELLS,
-	AMMO_SLUGS
+	AMMO_SLUGS,
+	AMMO_PISTOLPLASMA,
+	AMMO_RIFLEPLASMA,
+	AMMO_DETPACK,
+	AMMO_DOD
 } ammo_t;
 
 
@@ -249,6 +254,12 @@ typedef struct
 #define WEAP_RAILGUN			10
 #define WEAP_BFG				11
 
+#define WEAP_PLASMA_PISTOL	12
+#define WEAP_PLASMA_RIFLE	13
+#define WEAP_HELLFURY		14
+#define WEAP_LASERCANNON	15
+#define WEAP_DEATOMIZER		16
+#define WEAP_REMOTE_DETONATOR	17
 typedef struct gitem_s
 {
 	char		*classname;	// spawning name
