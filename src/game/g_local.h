@@ -367,6 +367,9 @@ typedef struct
 } spawn_temp_t;
 
 
+typedef struct camera_state_s camera_state_t;
+typedef struct rotate_train_state_s rotate_train_state_t;
+
 typedef struct
 {
 	// fixed data
@@ -771,6 +774,8 @@ qboolean SV_FilterPacket (char *from);
 // p_view.c
 //
 void ClientEndServerFrame (edict_t *ent);
+void Camera_ClientPreFrame (edict_t *ent);
+void Camera_ClientPostFrame (edict_t *ent);
 
 //
 // p_hud.c
@@ -959,6 +964,10 @@ struct gclient_s
 
 	edict_t		*chase_target;		// player we are chasing
 	qboolean	update_chase;		// need to update chase info?
+
+	edict_t		*camera;		// active cutscene camera
+	qboolean	camera_freeze;		// freeze movement while camera active
+	float		camera_endtime;		// when camera should release view
 };
 
 
@@ -1081,6 +1090,9 @@ struct edict_s
 	edict_t		*mynoise;		// can go in client only
 	edict_t		*mynoise2;
 
+	camera_state_t	*camera_state;
+	rotate_train_state_t	*rotate_train;
+
 	int			noise_index;
 	int			noise_index2;
 	float		volume;
@@ -1090,6 +1102,11 @@ struct edict_s
 	float		wait;
 	float		delay;			// before firing targets
 	float		random;
+
+	float		duration;		// per-entity travel duration override
+	vec3_t	rotate;		// rotation delta or absolute angles
+	vec3_t	rotate_speed;	// angular speed overrides
+	vec3_t	duration_vector;	// axis-specific durations (optional)
 
 	float		teleport_time;
 
