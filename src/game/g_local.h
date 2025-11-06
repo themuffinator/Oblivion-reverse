@@ -260,6 +260,8 @@ typedef struct
 #define WEAP_LASERCANNON	15
 #define WEAP_DEATOMIZER		16
 #define WEAP_REMOTE_DETONATOR	17
+#define WEAP_DONUT			18
+#define WEAP_REMOTE_CANNON	19
 typedef struct gitem_s
 {
 	char		*classname;	// spawning name
@@ -530,6 +532,14 @@ extern	int	body_armor_index;
 #define MOD_TRIGGER_HURT	31
 #define MOD_HIT				32
 #define MOD_TARGET_BLASTER	33
+#define MOD_MINE                        34
+#define MOD_DEATOMIZER          35
+#define MOD_PLASMA_PISTOL       36
+#define MOD_PLASMA_RIFLE        37
+#define MOD_DETPACK                     38
+#define MOD_LASERCANNON         39
+#define MOD_DONUT                      40
+#define MOD_REMOTE_CANNON       41
 #define MOD_FRIENDLY_FIRE	0x8000000
 
 extern	int	meansOfDeath;
@@ -892,6 +902,11 @@ typedef struct
 	int			max_grenades;
 	int			max_cells;
 	int			max_slugs;
+        int                     max_mines;
+        int                     max_detpacks;
+        int                     max_dods;
+        int                     max_pistolplasma;
+        int                     max_rifleplasma;
 
 	gitem_t		*weapon;
 	gitem_t		*lastweapon;
