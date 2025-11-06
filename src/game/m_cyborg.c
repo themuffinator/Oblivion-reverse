@@ -10,17 +10,24 @@
 
 #include "g_local.h"
 
-#define CYBORG_FRAME_STAND     0
-#define CYBORG_FRAME_WALK_START        1
-#define CYBORG_FRAME_WALK_END  4
-#define CYBORG_FRAME_RUN_START         5
-#define CYBORG_FRAME_RUN_END   8
-#define CYBORG_FRAME_ATTACK_START      9
-#define CYBORG_FRAME_ATTACK_END        12
+#define CYBORG_FRAME_STAND_START       0x7d
+#define CYBORG_FRAME_STAND_END         0x7d
+#define CYBORG_FRAME_IDLE_START        0x7d
+#define CYBORG_FRAME_IDLE_END          0x7d
+#define CYBORG_FRAME_WALK_START        0x12
+#define CYBORG_FRAME_WALK_END          0x17
+#define CYBORG_FRAME_RUN_START         0x4f
+#define CYBORG_FRAME_RUN_END           0x51
+#define CYBORG_FRAME_ATTACK1_START     0x18
+#define CYBORG_FRAME_ATTACK1_END       0x23
+#define CYBORG_FRAME_ATTACK2_START     0x2f
+#define CYBORG_FRAME_ATTACK2_END       0x34
+#define CYBORG_FRAME_ATTACK3_START     0x35
+#define CYBORG_FRAME_ATTACK3_END       0x3a
 #define CYBORG_FRAME_PAIN_START        13
-#define CYBORG_FRAME_PAIN_END  14
+#define CYBORG_FRAME_PAIN_END          14
 #define CYBORG_FRAME_DEATH_START       15
-#define CYBORG_FRAME_DEATH_END 17
+#define CYBORG_FRAME_DEATH_END         17
 
 static int sound_sight;
 static int sound_search;
@@ -90,60 +97,184 @@ static void cyborg_fire_deatom (edict_t *self)
     }
 }
 
-static void cyborg_attack_think (edict_t *self)
+static void cyborg_attack_fire_check (edict_t *self)
 {
     if (visible (self, self->enemy) && range (self, self->enemy) <= RANGE_FAR)
         cyborg_fire_deatom (self);
 }
 
+static void cyborg_idle_loop (edict_t *self);
+static void cyborg_locomotion_resume (edict_t *self);
+static void cyborg_attack_dispatch (edict_t *self);
+
 static mframe_t cyborg_frames_stand[] = {
     {ai_stand, 0, cyborg_idle}
 };
-static mmove_t cyborg_move_stand = {CYBORG_FRAME_STAND, CYBORG_FRAME_STAND, cyborg_frames_stand, NULL};
+static mmove_t cyborg_move_stand = {
+    CYBORG_FRAME_STAND_START, CYBORG_FRAME_STAND_END, cyborg_frames_stand, cyborg_idle_loop
+};
+
+static mframe_t cyborg_frames_idle[] = {
+    {ai_stand, 0, cyborg_idle}
+};
+static mmove_t cyborg_move_idle = {
+    CYBORG_FRAME_IDLE_START, CYBORG_FRAME_IDLE_END, cyborg_frames_idle, cyborg_idle_loop
+};
 
 static mframe_t cyborg_frames_walk[] = {
-    {ai_walk, 6, cyborg_step},
-    {ai_walk, 3, NULL},
-    {ai_walk, 6, cyborg_step},
-    {ai_walk, 3, NULL}
+    {ai_walk, 10, cyborg_step},
+    {ai_walk, 2, NULL},
+    {ai_walk, 8, cyborg_step},
+    {ai_walk, 2, NULL},
+    {ai_walk, 9, cyborg_step},
+    {ai_walk, 0, NULL}
 };
-static mmove_t cyborg_move_walk = {CYBORG_FRAME_WALK_START, CYBORG_FRAME_WALK_END, cyborg_frames_walk, NULL};
+static mmove_t cyborg_move_walk = {
+    CYBORG_FRAME_WALK_START, CYBORG_FRAME_WALK_END, cyborg_frames_walk, cyborg_locomotion_resume
+};
 
 static mframe_t cyborg_frames_run[] = {
-    {ai_run, 10, cyborg_step},
-    {ai_run, 6, NULL},
-    {ai_run, 10, cyborg_step},
-    {ai_run, 6, NULL}
+    {ai_run, 14, cyborg_step},
+    {ai_run, 4, NULL},
+    {ai_run, 16, cyborg_step}
 };
-static mmove_t cyborg_move_run = {CYBORG_FRAME_RUN_START, CYBORG_FRAME_RUN_END, cyborg_frames_run, NULL};
+static mmove_t cyborg_move_run = {
+    CYBORG_FRAME_RUN_START, CYBORG_FRAME_RUN_END, cyborg_frames_run, cyborg_locomotion_resume
+};
 
-static mframe_t cyborg_frames_attack[] = {
+static void cyborg_attack_finished (edict_t *self);
+
+static mframe_t cyborg_frames_attack_primary[] = {
     {ai_charge, 0, NULL},
-    {ai_charge, 0, cyborg_attack_think},
+    {ai_charge, 0, cyborg_attack_fire_check},
     {ai_charge, 0, NULL},
-    {ai_charge, 0, cyborg_attack_think}
+    {ai_charge, 0, cyborg_attack_fire_check},
+    {ai_charge, 0, NULL},
+    {ai_charge, 0, NULL},
+    {ai_charge, 0, cyborg_attack_fire_check},
+    {ai_charge, 0, NULL},
+    {ai_charge, 0, cyborg_attack_fire_check},
+    {ai_charge, 0, NULL},
+    {ai_charge, 0, cyborg_attack_fire_check},
+    {ai_charge, 0, NULL}
 };
-static mmove_t cyborg_move_attack = {CYBORG_FRAME_ATTACK_START, CYBORG_FRAME_ATTACK_END, cyborg_frames_attack, NULL};
+static mmove_t cyborg_move_attack_primary = {
+    CYBORG_FRAME_ATTACK1_START, CYBORG_FRAME_ATTACK1_END, cyborg_frames_attack_primary, cyborg_attack_finished
+};
+
+static mframe_t cyborg_frames_attack_secondary[] = {
+    {ai_charge, 0, NULL},
+    {ai_charge, 0, cyborg_attack_fire_check},
+    {ai_charge, 0, NULL},
+    {ai_charge, 0, NULL},
+    {ai_charge, 0, cyborg_attack_fire_check},
+    {ai_charge, 0, NULL}
+};
+static mmove_t cyborg_move_attack_secondary = {
+    CYBORG_FRAME_ATTACK2_START, CYBORG_FRAME_ATTACK2_END, cyborg_frames_attack_secondary, cyborg_attack_finished
+};
+
+static mframe_t cyborg_frames_attack_barrage[] = {
+    {ai_charge, 0, NULL},
+    {ai_charge, 0, cyborg_attack_fire_check},
+    {ai_charge, 0, cyborg_attack_fire_check},
+    {ai_charge, 0, NULL},
+    {ai_charge, 0, cyborg_attack_fire_check},
+    {ai_charge, 0, NULL}
+};
+static mmove_t cyborg_move_attack_barrage = {
+    CYBORG_FRAME_ATTACK3_START, CYBORG_FRAME_ATTACK3_END, cyborg_frames_attack_barrage, cyborg_attack_finished
+};
+
+static void cyborg_idle_loop (edict_t *self)
+{
+    self->monsterinfo.currentmove = &cyborg_move_idle;
+}
 
 static void cyborg_stand (edict_t *self)
 {
     self->monsterinfo.currentmove = &cyborg_move_stand;
 }
 
+static void cyborg_locomotion_stage (edict_t *self)
+{
+    if (self->monsterinfo.aiflags & AI_STAND_GROUND)
+    {
+        cyborg_stand (self);
+        return;
+    }
+
+    if (!self->enemy)
+    {
+        cyborg_stand (self);
+        return;
+    }
+
+    if (range (self, self->enemy) > RANGE_NEAR && random () > 0.4f)
+        self->monsterinfo.currentmove = &cyborg_move_run;
+    else
+        self->monsterinfo.currentmove = &cyborg_move_walk;
+}
+
 static void cyborg_walk (edict_t *self)
 {
-    self->monsterinfo.currentmove = &cyborg_move_walk;
+    cyborg_locomotion_stage (self);
 }
 
 static void cyborg_run (edict_t *self)
 {
-    self->monsterinfo.currentmove = &cyborg_move_run;
+    cyborg_locomotion_stage (self);
+}
+
+static void cyborg_locomotion_resume (edict_t *self)
+{
+    if (self->monsterinfo.aiflags & AI_STAND_GROUND || !self->enemy)
+    {
+        cyborg_stand (self);
+        return;
+    }
+
+    if (range (self, self->enemy) > RANGE_NEAR)
+        self->monsterinfo.currentmove = &cyborg_move_run;
+    else if (random () > 0.5f)
+        self->monsterinfo.currentmove = &cyborg_move_walk;
+    else
+        self->monsterinfo.currentmove = &cyborg_move_run;
 }
 
 static void cyborg_attack (edict_t *self)
 {
-    self->monsterinfo.currentmove = &cyborg_move_attack;
-    self->monsterinfo.attack_finished = level.time + 1.2f;
+    cyborg_attack_dispatch (self);
+}
+
+static void cyborg_attack_dispatch (edict_t *self)
+{
+    float choice;
+
+    if (!self->enemy)
+    {
+        cyborg_stand (self);
+        return;
+    }
+
+    choice = random ();
+
+    if (choice < 0.34f)
+        self->monsterinfo.currentmove = &cyborg_move_attack_primary;
+    else if (choice < 0.67f)
+        self->monsterinfo.currentmove = &cyborg_move_attack_secondary;
+    else
+        self->monsterinfo.currentmove = &cyborg_move_attack_barrage;
+}
+
+static void cyborg_attack_finished (edict_t *self)
+{
+    self->monsterinfo.attack_finished = level.time + 0.9f + random () * 0.6f;
+
+    if (self->monsterinfo.aiflags & AI_STAND_GROUND)
+        cyborg_stand (self);
+    else
+        cyborg_locomotion_stage (self);
 }
 
 static void cyborg_pain (edict_t *self, edict_t *other, float kick, int damage)
@@ -225,6 +356,7 @@ void SP_monster_cyborg (edict_t *self)
     self->die = cyborg_die;
 
     self->monsterinfo.stand = cyborg_stand;
+    self->monsterinfo.idle = cyborg_stand;
     self->monsterinfo.walk = cyborg_walk;
     self->monsterinfo.run = cyborg_run;
     self->monsterinfo.sight = cyborg_sight;
