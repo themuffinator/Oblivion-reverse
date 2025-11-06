@@ -39,6 +39,12 @@ void Weapon_Grenade (edict_t *ent);
 void Weapon_GrenadeLauncher (edict_t *ent);
 void Weapon_Railgun (edict_t *ent);
 void Weapon_BFG (edict_t *ent);
+void Weapon_PlasmaPistol (edict_t *ent);
+void Weapon_PlasmaRifle (edict_t *ent);
+void Weapon_HellFury (edict_t *ent);
+void Weapon_LaserCannon (edict_t *ent);
+void Weapon_Deatomizer (edict_t *ent);
+void Weapon_RemoteDetonator (edict_t *ent);
 
 gitem_armor_t jacketarmor_info	= { 25,  50, .30, .00, ARMOR_JACKET};
 gitem_armor_t combatarmor_info	= { 50, 100, .60, .30, ARMOR_COMBAT};

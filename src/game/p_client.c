@@ -1145,6 +1145,8 @@ void PutClientInServer (edict_t *ent)
 	int		i;
 	client_persistant_t	saved;
 	client_respawn_t	resp;
+	float		plasma_pistol_regen_at;
+	float		plasma_rifle_regen_at;
 
 	// find a spawn point
 	// do it before setting health back up, so farthest
@@ -1153,6 +1155,10 @@ void PutClientInServer (edict_t *ent)
 
 	index = ent-g_edicts-1;
 	client = ent->client;
+
+	// remember regeneration timers so they persist across respawn resets
+	plasma_pistol_regen_at = client->plasma_pistol_next_regen;
+	plasma_rifle_regen_at = client->plasma_rifle_next_regen;
 
 	// deathmatch wipes most client data every spawn
 	if (deathmatch->value)
@@ -1196,6 +1202,9 @@ void PutClientInServer (edict_t *ent)
 	if (client->pers.health <= 0)
 		InitClientPersistant(client);
 	client->resp = resp;
+
+	client->plasma_pistol_next_regen = plasma_pistol_regen_at;
+	client->plasma_rifle_next_regen = plasma_rifle_regen_at;
 
 	// copy some data from the client to the entity
 	FetchClientEntData (ent);
