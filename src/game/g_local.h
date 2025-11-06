@@ -19,6 +19,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // g_local.h -- local definitions for game module
 
+#include <stddef.h>
+
 #include "q_shared.h"
 
 // define GAME_INCLUDE so that game.h does not define the
@@ -299,8 +301,6 @@ typedef struct gitem_s
 
 
 
-// Mission system state tracking
-
 typedef enum
 {
         MISSION_OBJECTIVE_INACTIVE = 0,
@@ -309,14 +309,14 @@ typedef enum
         MISSION_OBJECTIVE_FAILED
 } mission_objective_state_t;
 
-typedef struct mission_objective_save_s
+typedef struct
 {
         char                    id[32];
         char                    title[64];
         char                    text[256];
         mission_objective_state_t       state;
-        int                     timer_limit;
-        int                     timer_remaining;
+        int                             timer_limit;
+        int                             timer_remaining;
         qboolean                primary;
         qboolean                persistent;
         vec3_t                  origin;
@@ -464,6 +464,7 @@ typedef struct camera_state_s
         int             sound_loop;
 } camera_state_t;
 
+typedef struct camera_state_s camera_state_t;
 typedef struct rotate_train_state_s rotate_train_state_t;
 
 typedef struct
@@ -619,10 +620,10 @@ extern	int	meansOfDeath;
 
 extern	edict_t			*g_edicts;
 
-#define	FOFS(x) (int)&(((edict_t *)0)->x)
-#define	STOFS(x) (int)&(((spawn_temp_t *)0)->x)
-#define	LLOFS(x) (int)&(((level_locals_t *)0)->x)
-#define	CLOFS(x) (int)&(((gclient_t *)0)->x)
+#define	FOFS(x) ((ptrdiff_t)offsetof(edict_t, x))
+#define	STOFS(x) ((ptrdiff_t)offsetof(spawn_temp_t, x))
+#define	LLOFS(x) ((ptrdiff_t)offsetof(level_locals_t, x))
+#define	CLOFS(x) ((ptrdiff_t)offsetof(gclient_t, x))
 
 #define random()	((rand () & 0x7fff) / ((float)0x7fff))
 #define crandom()	(2.0 * (random() - 0.5))
@@ -700,7 +701,7 @@ typedef enum {
 typedef struct
 {
 	char	*name;
-	int		ofs;
+	ptrdiff_t	ofs;
 	fieldtype_t	type;
 	int		flags;
 } field_t;
@@ -748,7 +749,7 @@ void RTDU_PlayerDie (edict_t *ent);
 //
 qboolean	KillBox (edict_t *ent);
 void	G_ProjectSource (vec3_t point, vec3_t distance, vec3_t forward, vec3_t right, vec3_t result);
-edict_t *G_Find (edict_t *from, int fieldofs, char *match);
+edict_t *G_Find (edict_t *from, ptrdiff_t fieldofs, char *match);
 edict_t *findradius (edict_t *from, vec3_t org, float rad);
 edict_t *G_PickTarget (char *targetname);
 void	G_UseTargets (edict_t *ent, edict_t *activator);
