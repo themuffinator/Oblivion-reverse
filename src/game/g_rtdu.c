@@ -12,8 +12,8 @@ static int rtdu_tripod_model_index;
 static int rtdu_fire_sound;
 static int rtdu_spawn_sound;
 
-static const vec3_t rtdu_mins = {-16.0f, -16.0f, 0.0f};
-static const vec3_t rtdu_maxs = { 16.0f,  16.0f, 48.0f};
+static vec3_t rtdu_mins = {-16.0f, -16.0f, 0.0f};
+static vec3_t rtdu_maxs = { 16.0f,  16.0f, 48.0f};
 
 static void RTDU_ClearTripod(edict_t *turret)
 {

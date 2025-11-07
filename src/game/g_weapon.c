@@ -458,7 +458,9 @@ static void Grenade_Explode (edict_t *ent)
 	gi.WritePosition (origin);
 	gi.multicast (ent->s.origin, MULTICAST_PHS);
 
-	G_FreeEdict (ent);
+        G_FreeEdict (ent);
+}
+
 void fire_plasma_bolt (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed, int effect, int mod)
 {
 	edict_t *bolt;
@@ -498,8 +500,6 @@ void fire_plasma_bolt (edict_t *self, vec3_t start, vec3_t dir, int damage, int 
 		VectorMA (bolt->s.origin, -10, dir, bolt->s.origin);
 		bolt->touch (bolt, tr.ent, NULL, NULL);
 	}
-}
-
 }
 
 static void Grenade_Touch (edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf)
