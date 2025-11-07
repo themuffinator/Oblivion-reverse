@@ -67,6 +67,7 @@ void SP_trigger_elevator (edict_t *ent);
 void SP_trigger_gravity (edict_t *ent);
 void SP_trigger_monsterjump (edict_t *ent);
 void SP_trigger_misc_camera (edict_t *ent);
+void SP_trigger_teleport (edict_t *ent);
 
 void SP_target_temp_entity (edict_t *ent);
 void SP_target_speaker (edict_t *ent);
@@ -194,6 +195,7 @@ spawn_t	spawns[] = {
 	{"trigger_elevator", SP_trigger_elevator},
 	{"trigger_gravity", SP_trigger_gravity},
 	{"trigger_monsterjump", SP_trigger_monsterjump},
+	{"trigger_teleport", SP_trigger_teleport},
 	{"trigger_misc_camera", SP_trigger_misc_camera},
 
 	{"target_temp_entity", SP_target_temp_entity},
