@@ -17,6 +17,7 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
+#include <math.h>
 #include "g_local.h"
 
 /*QUAKED target_temp_entity (1 0 0) (-8 -8 -8) (8 8 8)
@@ -149,6 +150,18 @@ void SP_target_help(edict_t *ent)
 		G_FreeEdict (ent);
 		return;
 	}
+
+	if (!ent->oblivion.mission_id && ent->targetname && ent->targetname[0])
+		ent->oblivion.mission_id = ent->targetname;
+
+	if (VectorCompare(ent->oblivion.mission_origin, vec3_origin))
+		VectorCopy(ent->s.origin, ent->oblivion.mission_origin);
+
+	if (VectorCompare(ent->oblivion.mission_angles, vec3_origin))
+		VectorCopy(ent->s.angles, ent->oblivion.mission_angles);
+
+	if (ent->oblivion.mission_timer_limit <= 0 && ent->wait > 0.0f)
+		ent->oblivion.mission_timer_limit = (int)floorf(ent->wait + 0.5f);
 
 	Mission_RegisterHelpTarget (ent);
 

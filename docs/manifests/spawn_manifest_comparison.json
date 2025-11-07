@@ -733,12 +733,12 @@
         null
       ]
     },
-    "item_health": {
-      "count": [
+    "info_teleport_dest": {
+      "offset_0xf8": [
         [
           {
-            "offset": 596,
-            "value": 10
+            "offset": 248,
+            "value": 0
           }
         ],
         null
@@ -1834,6 +1834,17 @@
         null
       ]
     },
+    "misc_screenfader": {
+      "offset_0xf8": [
+        [
+          {
+            "offset": 248,
+            "value": 0
+          }
+        ],
+        null
+      ]
+    },
     "misc_strogg_ship": {
       "offset_0x104": [
         [
@@ -2048,6 +2059,165 @@
           {
             "offset": 248,
             "value": 0
+          }
+        ],
+        null
+      ]
+    },
+    "monster_badass": {
+      "currentmove": [
+        [
+          {
+            "offset": 856,
+            "value": 268749592
+          }
+        ],
+        null
+      ],
+      "dodge": [
+        [
+          {
+            "offset": 892,
+            "value": 0
+          }
+        ],
+        null
+      ],
+      "health": [
+        [
+          {
+            "offset": 544,
+            "value": 1500
+          },
+          {
+            "offset": 544,
+            "value": 4294967295
+          }
+        ],
+        1000.0
+      ],
+      "mass": [
+        [
+          {
+            "offset": 400,
+            "value": 1000
+          }
+        ],
+        600.0
+      ],
+      "offset_0x104": [
+        [
+          {
+            "offset": 260,
+            "value": 5
+          }
+        ],
+        null
+      ],
+      "offset_0x1e4": [
+        [
+          {
+            "offset": 484,
+            "value": 1103626240
+          }
+        ],
+        null
+      ],
+      "offset_0x1ec": [
+        [
+          {
+            "offset": 492,
+            "value": 0
+          }
+        ],
+        null
+      ],
+      "offset_0x228": [
+        [
+          {
+            "offset": 552,
+            "value": 0
+          }
+        ],
+        null
+      ],
+      "offset_0x22c": [
+        [
+          {
+            "offset": 556,
+            "value": 2
+          }
+        ],
+        null
+      ],
+      "offset_0x364": [
+        [
+          {
+            "offset": 868,
+            "value": 1065353216
+          }
+        ],
+        null
+      ],
+      "offset_0xbc": [
+        [
+          {
+            "offset": 188,
+            "value": 3254255616
+          }
+        ],
+        null
+      ],
+      "offset_0xc0": [
+        [
+          {
+            "offset": 192,
+            "value": 3266314240
+          }
+        ],
+        null
+      ],
+      "offset_0xc4": [
+        [
+          {
+            "offset": 196,
+            "value": 3263168512
+          }
+        ],
+        null
+      ],
+      "offset_0xc8": [
+        [
+          {
+            "offset": 200,
+            "value": 1108869120
+          }
+        ],
+        null
+      ],
+      "offset_0xcc": [
+        [
+          {
+            "offset": 204,
+            "value": 1101529088
+          }
+        ],
+        null
+      ],
+      "offset_0xd0": [
+        [
+          {
+            "offset": 208,
+            "value": 3243245568
+          }
+        ],
+        null
+      ],
+      "offset_0xf8": [
+        [
+          {
+            "offset": 248,
+            "value": 2
           }
         ],
         null
@@ -4305,6 +4475,37 @@
         null
       ]
     },
+    "target_railgun": {
+      "offset_0x244": [
+        [
+          {
+            "offset": 580,
+            "value": 150
+          }
+        ],
+        null
+      ],
+      "offset_0xb8": [
+        [
+          {
+            "offset": 184,
+            "value": 1
+          }
+        ],
+        null
+      ]
+    },
+    "target_rocket": {
+      "offset_0x244": [
+        [
+          {
+            "offset": 580,
+            "value": 100
+          }
+        ],
+        null
+      ]
+    },
     "target_secret": {
       "offset_0xb8": [
         [
@@ -4447,6 +4648,48 @@
           {
             "offset": 656,
             "value": -1.0
+          }
+        ],
+        null
+      ]
+    },
+    "trigger_teleport": {
+      "offset_0x104": [
+        [
+          {
+            "offset": 260,
+            "value": 0
+          }
+        ],
+        null
+      ],
+      "offset_0xf8": [
+        [
+          {
+            "offset": 248,
+            "value": 1
+          }
+        ],
+        null
+      ],
+      "touch": [
+        [
+          {
+            "offset": 508,
+            "value": 0
+          },
+          {
+            "offset": 508,
+            "value": 0
+          }
+        ],
+        null
+      ],
+      "wait": [
+        [
+          {
+            "offset": 656,
+            "value": 0.20000000298023224
           }
         ],
         null
@@ -4642,7 +4885,6 @@
     "ammo_rockets",
     "ammo_shells",
     "ammo_slugs",
-    "info_teleport_dest",
     "item_adrenaline",
     "item_ancient_head",
     "item_armor_body",
@@ -4667,11 +4909,6 @@
     "key_power_cube",
     "key_pyramid",
     "key_red_key",
-    "misc_screenfader",
-    "monster_badass",
-    "target_railgun",
-    "target_rocket",
-    "trigger_teleport",
     "weapon_bfg",
     "weapon_chaingun",
     "weapon_deatomizer",
@@ -4744,20 +4981,6 @@
           1,
           2,
           4
-        ]
-      ]
-    },
-    "func_group": {
-      "checks": [
-        [],
-        [
-          1
-        ]
-      ],
-      "sets": [
-        [],
-        [
-          1
         ]
       ]
     },
@@ -4836,20 +5059,6 @@
         ]
       ]
     },
-    "info_null": {
-      "checks": [
-        [],
-        [
-          1
-        ]
-      ],
-      "sets": [
-        [],
-        [
-          1
-        ]
-      ]
-    },
     "light": {
       "checks": [
         [],
@@ -4863,8 +5072,15 @@
         [],
         [
           2,
+          8,
           32,
           64
+        ]
+      ],
+      "sets": [
+        [],
+        [
+          32
         ]
       ]
     },
@@ -4894,6 +5110,22 @@
         [
           8,
           16
+        ]
+      ]
+    },
+    "misc_screenfader": {
+      "checks": [
+        [],
+        [
+          1
+        ]
+      ]
+    },
+    "monster_badass": {
+      "checks": [
+        [],
+        [
+          8
         ]
       ]
     },
@@ -4959,6 +5191,20 @@
         [],
         [
           4
+        ]
+      ]
+    },
+    "trigger_teleport": {
+      "checks": [
+        [
+          2,
+          16
+        ],
+        [
+          1,
+          2,
+          4,
+          16
         ]
       ]
     }
