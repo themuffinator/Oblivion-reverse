@@ -139,6 +139,7 @@ void SP_misc_blackhole (edict_t *self);
 void SP_misc_eastertank (edict_t *self);
 void SP_misc_easterchick (edict_t *self);
 void SP_misc_easterchick2 (edict_t *self);
+void SP_misc_screenfader (edict_t *self);
 
 void SP_monster_berserk (edict_t *self);
 void SP_monster_gladiator (edict_t *self);
@@ -273,6 +274,7 @@ spawn_t	spawns[] = {
 	{"misc_eastertank", SP_misc_eastertank},
 	{"misc_easterchick", SP_misc_easterchick},
 	{"misc_easterchick2", SP_misc_easterchick2},
+	{"misc_screenfader", SP_misc_screenfader},
 
         {"monster_berserk", SP_monster_berserk},
         {"monster_badass", SP_monster_badass},
@@ -836,6 +838,7 @@ void SP_worldspawn (edict_t *ent)
 
 	// reserve some spots for dead player bodies for coop / deathmatch
 	InitBodyQue ();
+	G_ScreenFade_Reset ();
 
 	// set configstrings for items
 	SetItemNames ();
