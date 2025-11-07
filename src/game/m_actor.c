@@ -24,10 +24,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #define	MAX_ACTOR_NAMES		8
 
-/* misc_actor spawnflags */
-#define ACTOR_SPAWNFLAG_START_ON        32
-#define ACTOR_SPAWNFLAG_WIMPY           64
-
 char *actor_names[MAX_ACTOR_NAMES] =
 {
 	"Hellrot",
@@ -431,66 +427,85 @@ WIMPY		reduce the actor's health so it can be dispatched quickly
 
 void SP_misc_actor (edict_t *self)
 {
-	if (deathmatch->value)
-	{
-		G_FreeEdict (self);
+        if (deathmatch->value)
+        {
+                G_FreeEdict (self);
+                return;
+        }
+
+        if (!self->targetname)
+        {
+                self->targetname = G_CopyString ("Yo Mama");
+                self->spawnflags |= ACTOR_SPAWNFLAG_START_ON;
+        }
+
+        if (!self->target)
+        {
+                gi.dprintf("%s with no target at %s\n", self->classname, vtos(self->s.origin));
+                G_FreeEdict (self);
 		return;
 	}
 
-	if (!self->targetname)
-	{
-		gi.dprintf("untargeted %s at %s\n", self->classname, vtos(self->s.origin));
-		G_FreeEdict (self);
-		return;
-	}
+        self->movetype = MOVETYPE_STEP;
+        self->solid = SOLID_BBOX;
+        self->s.modelindex = gi.modelindex("players/male/tris.md2");
+        self->s.skinnum = 255;
+        VectorSet (self->mins, -16, -16, -24);
+        VectorSet (self->maxs, 16, 16, 32);
 
-	if (!self->target)
-	{
-		gi.dprintf("%s with no target at %s\n", self->classname, vtos(self->s.origin));
-		G_FreeEdict (self);
-		return;
-	}
+        self->viewheight = 5;
+        self->takedamage = DAMAGE_AIM;
 
-	self->movetype = MOVETYPE_STEP;
-	self->solid = SOLID_BBOX;
-	self->s.modelindex = gi.modelindex("players/male/tris.md2");
-	VectorSet (self->mins, -16, -16, -24);
-	VectorSet (self->maxs, 16, 16, 32);
+        if (self->health <= 0)
+        {
+                if (self->spawnflags & ACTOR_SPAWNFLAG_WIMPY)
+                        self->health = 50;
+                else
+                        self->health = 100;
+        }
+        self->max_health = self->health;
+        self->gib_health = -80;
+        self->mass = 200;
 
-	if (!self->health)
-	{
-		if (self->spawnflags & ACTOR_SPAWNFLAG_WIMPY)
-			self->health = 50;
-		else
-			self->health = 100;
-	}
-	self->max_health = self->health;
-	self->mass = 200;
+        self->pain = actor_pain;
+        self->die = actor_die;
 
-	self->pain = actor_pain;
-	self->die = actor_die;
+        self->monsterinfo.stand = actor_stand;
+        self->monsterinfo.walk = actor_walk;
+        self->monsterinfo.run = actor_run;
+        self->monsterinfo.attack = actor_attack;
+        self->monsterinfo.melee = NULL;
+        self->monsterinfo.sight = NULL;
 
-	self->monsterinfo.stand = actor_stand;
-	self->monsterinfo.walk = actor_walk;
-	self->monsterinfo.run = actor_run;
-	self->monsterinfo.attack = actor_attack;
-	self->monsterinfo.melee = NULL;
-	self->monsterinfo.sight = NULL;
+        if (!(self->spawnflags & ACTOR_SPAWNFLAG_WIMPY))
+                self->monsterinfo.aiflags |= AI_GOOD_GUY;
 
-	self->monsterinfo.aiflags |= AI_GOOD_GUY;
+        if (self->spawnflags & ACTOR_SPAWNFLAG_CORPSE)
+        {
+                self->health = -1;
+                self->max_health = self->health;
+                self->takedamage = DAMAGE_NO;
+                self->deadflag = DEAD_DEAD;
+                self->svflags |= SVF_DEADMONSTER;
+                VectorSet (self->mins, -16, -16, -24);
+                VectorSet (self->maxs, 16, 16, -8);
+                self->s.frame = FRAME_death303;
+                gi.linkentity (self);
+                return;
+        }
 
-	gi.linkentity (self);
+        gi.linkentity (self);
 
-	self->monsterinfo.currentmove = &actor_move_stand;
-	self->monsterinfo.scale = MODEL_SCALE;
+        self->monsterinfo.currentmove = &actor_move_stand;
+        self->monsterinfo.scale = MODEL_SCALE;
 
-	walkmonster_start (self);
+        walkmonster_start (self);
 
-	// actors always start in a dormant state, they *must* be used to get going
-	self->use = actor_use;
+        // actors always start in a dormant state, they *must* be used to get going
+        self->use = actor_use;
 
-	if ((self->spawnflags & ACTOR_SPAWNFLAG_START_ON) && !(self->spawnflags & 2))
-		actor_use (self, self, self);
+        if (self->spawnflags & ACTOR_SPAWNFLAG_START_ON)
+                actor_use (self, self, self);
 }
 
 
@@ -525,13 +540,19 @@ void target_actor_touch (edict_t *self, edict_t *other, cplane_t *plane, csurfac
 	{
 		int		n;
 		edict_t	*ent;
+		const char	*speaker;
+
+		if (other->oblivion.custom_name && other->oblivion.custom_name[0])
+			speaker = other->oblivion.custom_name;
+		else
+			speaker = actor_names[(other - g_edicts)%MAX_ACTOR_NAMES];
 
 		for (n = 1; n <= game.maxclients; n++)
 		{
 			ent = &g_edicts[n];
 			if (!ent->inuse)
 				continue;
-			gi.cprintf (ent, PRINT_CHAT, "%s: %s\n", actor_names[(other - g_edicts)%MAX_ACTOR_NAMES], self->message);
+			gi.cprintf (ent, PRINT_CHAT, "%s: %s\n", speaker, self->message);
 		}
 	}
 
