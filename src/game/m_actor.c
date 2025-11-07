@@ -405,22 +405,25 @@ void actor_attack(edict_t *self)
 
 void actor_use (edict_t *self, edict_t *other, edict_t *activator)
 {
-	vec3_t		v;
+	vec3_t		dir;
+	edict_t	*target;
 
-	self->goalentity = self->movetarget = G_PickTarget(self->target);
-	if ((!self->movetarget) || (strcmp(self->movetarget->classname, "target_actor") != 0))
+	target = G_PickTarget (self->target);
+	self->goalentity = target;
+	self->movetarget = target;
+
+	if (target && target->classname && strcmp (target->classname, "target_actor") == 0)
 	{
-		gi.dprintf ("%s has bad target %s at %s\n", self->classname, self->target, vtos(self->s.origin));
+		VectorSubtract (target->s.origin, self->s.origin, dir);
+		self->s.angles[YAW] = self->ideal_yaw = vectoyaw (dir);
+		self->monsterinfo.walk (self);
 		self->target = NULL;
-		self->monsterinfo.pausetime = 100000000;
-		self->monsterinfo.stand (self);
 		return;
 	}
 
-	VectorSubtract (self->goalentity->s.origin, self->s.origin, v);
-	self->ideal_yaw = self->s.angles[YAW] = vectoyaw(v);
-	self->monsterinfo.walk (self);
 	self->target = NULL;
+	self->monsterinfo.pausetime = 100000000;
+	self->monsterinfo.stand (self);
 }
 
 
@@ -439,21 +442,13 @@ void SP_misc_actor (edict_t *self)
 
 	if (!self->targetname)
 	{
-		gi.dprintf("untargeted %s at %s\n", self->classname, vtos(self->s.origin));
-		G_FreeEdict (self);
-		return;
+		self->targetname = "Yo Mama";
+		self->spawnflags |= ACTOR_SPAWNFLAG_START_ON;
 	}
 
-	if (!self->target)
-	{
-		gi.dprintf("%s with no target at %s\n", self->classname, vtos(self->s.origin));
-		G_FreeEdict (self);
-		return;
-	}
-
+	self->s.modelindex = gi.modelindex("players/male/tris.md2");
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
-	self->s.modelindex = gi.modelindex("players/male/tris.md2");
 	VectorSet (self->mins, -16, -16, -24);
 	VectorSet (self->maxs, 16, 16, 32);
 
@@ -467,8 +462,23 @@ void SP_misc_actor (edict_t *self)
 	self->max_health = self->health;
 	self->mass = 200;
 
+	if (self->spawnflags & ACTOR_SPAWNFLAG_CORPSE)
+	{
+		static const int corpse_frames[] = { 0xb7, 0xbd, 0xc5 };
+
+		self->svflags |= SVF_DEADMONSTER;
+		self->deadflag = DEAD_DEAD;
+		self->health = -1;
+		VectorSet (self->mins, -16, -16, -24);
+		VectorSet (self->maxs, 16, 16, -8);
+		self->s.frame = corpse_frames[rand() % (sizeof(corpse_frames) / sizeof(corpse_frames[0]))];
+		gi.linkentity (self);
+		return;
+	}
+
 	self->pain = actor_pain;
 	self->die = actor_die;
+	self->use = actor_use;
 
 	self->monsterinfo.stand = actor_stand;
 	self->monsterinfo.walk = actor_walk;
@@ -477,7 +487,8 @@ void SP_misc_actor (edict_t *self)
 	self->monsterinfo.melee = NULL;
 	self->monsterinfo.sight = NULL;
 
-	self->monsterinfo.aiflags |= AI_GOOD_GUY;
+	if (!(self->spawnflags & ACTOR_SPAWNFLAG_WIMPY))
+		self->monsterinfo.aiflags |= AI_GOOD_GUY;
 
 	gi.linkentity (self);
 
@@ -486,11 +497,8 @@ void SP_misc_actor (edict_t *self)
 
 	walkmonster_start (self);
 
-	// actors always start in a dormant state, they *must* be used to get going
-	self->use = actor_use;
-
-	if ((self->spawnflags & ACTOR_SPAWNFLAG_START_ON) && !(self->spawnflags & 2))
-		actor_use (self, self, self);
+	if (self->spawnflags & ACTOR_SPAWNFLAG_START_ON)
+		self->use (self, &g_edicts[0], &g_edicts[0]);
 }
 
 
