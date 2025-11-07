@@ -397,8 +397,9 @@ Used as a positional target for spotlights, etc.
 Used as a positional target for lightning.
 */
 
-/*QUAKED info_teleport_dest (1 0 0) (-16 -16 -24) (16 16 32)
-Point teleporters at these.
+/*QUAKED info_teleport_dest (1 0 0) (-64 -64 -96) (32 32 64)
+Invisible teleport landing marker. Point trigger_teleports at these to define
+the exit position and facing.
 */
 
 /*QUAKED light (0 1 0) (-8 -8 -8) (8 8 8) START_OFF

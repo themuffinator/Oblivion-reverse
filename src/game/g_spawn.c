@@ -95,6 +95,7 @@ void SP_light_mine1 (edict_t *ent);
 void SP_light_mine2 (edict_t *ent);
 void SP_info_null (edict_t *self);
 void SP_info_notnull (edict_t *self);
+void SP_info_teleport_dest (edict_t *self);
 void SP_path_corner (edict_t *self);
 void SP_point_combat (edict_t *self);
 
@@ -221,11 +222,12 @@ spawn_t	spawns[] = {
 	{"light", SP_light},
 	{"light_mine1", SP_light_mine1},
 	{"light_mine2", SP_light_mine2},
-	{"info_null", SP_info_null},
-	{"func_group", SP_info_null},
-	{"info_notnull", SP_info_notnull},
-	{"path_corner", SP_path_corner},
-	{"point_combat", SP_point_combat},
+        {"info_null", SP_info_null},
+        {"func_group", SP_info_null},
+        {"info_notnull", SP_info_notnull},
+        {"info_teleport_dest", SP_info_teleport_dest},
+        {"path_corner", SP_path_corner},
+        {"point_combat", SP_point_combat},
 
 	{"misc_explobox", SP_misc_explobox},
 	{"misc_banner", SP_misc_banner},
