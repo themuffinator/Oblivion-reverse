@@ -527,9 +527,32 @@ Used as a positional target for lightning.
 */
 void SP_info_notnull (edict_t *self)
 {
-	VectorCopy (self->s.origin, self->absmin);
-	VectorCopy (self->s.origin, self->absmax);
+        VectorCopy (self->s.origin, self->absmin);
+        VectorCopy (self->s.origin, self->absmax);
 };
+
+
+/*QUAKED info_teleport_dest (1 0 0) (-64 -64 -96) (32 32 64)
+Point teleporters at these. The entity is invisible, non-solid, and stores the
+teleport exit position and facing for trigger_teleport.
+*/
+void SP_info_teleport_dest (edict_t *self)
+{
+        VectorClear (self->velocity);
+        VectorClear (self->avelocity);
+
+        VectorCopy (self->s.origin, self->move_origin);
+        VectorCopy (self->s.angles, self->move_angles);
+
+        self->movetype = MOVETYPE_NONE;
+        self->solid = SOLID_NOT;
+        self->svflags |= SVF_NOCLIENT;
+
+        VectorSet (self->mins, -64, -64, -96);
+        VectorSet (self->maxs, 32, 32, 64);
+
+        gi.linkentity (self);
+}
 
 
 /*QUAKED light (0 1 0) (-8 -8 -8) (8 8 8) START_OFF

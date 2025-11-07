@@ -78,6 +78,7 @@ void SP_target_splash (edict_t *ent);
 void SP_target_spawner (edict_t *ent);
 void SP_target_blaster (edict_t *ent);
 void SP_target_rocket (edict_t *ent);
+void SP_target_railgun (edict_t *ent);
 void SP_target_crosslevel_trigger (edict_t *ent);
 void SP_target_crosslevel_target (edict_t *ent);
 void SP_target_laser (edict_t *self);
@@ -96,6 +97,7 @@ void SP_light_mine1 (edict_t *ent);
 void SP_light_mine2 (edict_t *ent);
 void SP_info_null (edict_t *self);
 void SP_info_notnull (edict_t *self);
+void SP_info_teleport_dest (edict_t *self);
 void SP_path_corner (edict_t *self);
 void SP_point_combat (edict_t *self);
 
@@ -207,6 +209,7 @@ spawn_t	spawns[] = {
 	{"target_spawner", SP_target_spawner},
 	{"target_blaster", SP_target_blaster},
 	{"target_rocket", SP_target_rocket},
+	{"target_railgun", SP_target_railgun},
 	{"target_crosslevel_trigger", SP_target_crosslevel_trigger},
 	{"target_crosslevel_target", SP_target_crosslevel_target},
 	{"target_laser", SP_target_laser},
@@ -223,11 +226,12 @@ spawn_t	spawns[] = {
 	{"light", SP_light},
 	{"light_mine1", SP_light_mine1},
 	{"light_mine2", SP_light_mine2},
-	{"info_null", SP_info_null},
-	{"func_group", SP_info_null},
-	{"info_notnull", SP_info_notnull},
-	{"path_corner", SP_path_corner},
-	{"point_combat", SP_point_combat},
+        {"info_null", SP_info_null},
+        {"func_group", SP_info_null},
+        {"info_notnull", SP_info_notnull},
+        {"info_teleport_dest", SP_info_teleport_dest},
+        {"path_corner", SP_path_corner},
+        {"point_combat", SP_point_combat},
 
 	{"misc_explobox", SP_misc_explobox},
 	{"misc_banner", SP_misc_banner},
