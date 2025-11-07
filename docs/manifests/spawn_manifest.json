@@ -5763,13 +5763,9 @@
       "function": "SP_info_null",
       "spawnflags": {
         "assignments": [],
-        "checks": [
-          1
-        ],
+        "checks": [],
         "clears": [],
-        "sets": [
-          1
-        ]
+        "sets": []
       }
     },
     "func_killbox": {
@@ -5921,13 +5917,9 @@
       "function": "SP_info_null",
       "spawnflags": {
         "assignments": [],
-        "checks": [
-          1
-        ],
+        "checks": [],
         "clears": [],
-        "sets": [
-          1
-        ]
+        "sets": []
       }
     },
     "info_player_coop": {
@@ -5970,8 +5962,20 @@
         "sets": []
       }
     },
-    "item_health": {
+    "info_teleport_dest": {
       "defaults": {},
+      "function": "SP_info_teleport_dest",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "item_health": {
+      "defaults": {
+        "count": 10.0
+      },
       "function": "SP_item_health",
       "spawnflags": {
         "assignments": [],
@@ -6058,11 +6062,14 @@
         "assignments": [],
         "checks": [
           2,
+          8,
           32,
           64
         ],
         "clears": [],
-        "sets": []
+        "sets": [
+          32
+        ]
       }
     },
     "misc_banner": {
@@ -6234,6 +6241,21 @@
         "sets": []
       }
     },
+    "misc_screenfader": {
+      "defaults": {
+        "random": 0.0,
+        "wait": 1.0
+      },
+      "function": "SP_misc_screenfader",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [
+          1
+        ],
+        "clears": [],
+        "sets": []
+      }
+    },
     "misc_strogg_ship": {
       "defaults": {},
       "function": "SP_misc_strogg_ship",
@@ -6282,6 +6304,24 @@
       "spawnflags": {
         "assignments": [],
         "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "monster_badass": {
+      "defaults": {
+        "gib_health": -200.0,
+        "health": 1000.0,
+        "mass": 600.0,
+        "monsterinfo.max_ideal_distance": 1500.0,
+        "yaw_speed": 25.0
+      },
+      "function": "SP_monster_badass",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [
+          8
+        ],
         "clears": [],
         "sets": []
       }
@@ -6829,6 +6869,34 @@
         "sets": []
       }
     },
+    "target_railgun": {
+      "defaults": {
+        "dmg": 150.0
+      },
+      "function": "SP_target_railgun",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "target_rocket": {
+      "defaults": {
+        "count": 120.0,
+        "delay": 0.0,
+        "dmg": 100.0,
+        "dmg_radius": 120.0,
+        "speed": 650.0
+      },
+      "function": "SP_target_rocket",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
     "target_secret": {
       "defaults": {},
       "function": "SP_target_secret",
@@ -7031,6 +7099,23 @@
       "spawnflags": {
         "assignments": [],
         "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "trigger_teleport": {
+      "defaults": {
+        "nextthink": 0.0
+      },
+      "function": "SP_trigger_teleport",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [
+          1,
+          2,
+          4,
+          16
+        ],
         "clears": [],
         "sets": []
       }

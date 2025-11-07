@@ -5974,7 +5974,9 @@
         }
       },
       "item_health": {
-        "defaults": {},
+        "defaults": {
+          "count": 10.0
+        },
         "function": "SP_item_health",
         "spawnflags": {
           "assignments": [],
@@ -6061,11 +6063,14 @@
           "assignments": [],
           "checks": [
             2,
+            8,
             32,
             64
           ],
           "clears": [],
-          "sets": []
+          "sets": [
+            32
+          ]
         }
       },
       "misc_banner": {
@@ -6237,6 +6242,21 @@
           "sets": []
         }
       },
+      "misc_screenfader": {
+        "defaults": {
+          "random": 0.0,
+          "wait": 1.0
+        },
+        "function": "SP_misc_screenfader",
+        "spawnflags": {
+          "assignments": [],
+          "checks": [
+            1
+          ],
+          "clears": [],
+          "sets": []
+        }
+      },
       "misc_strogg_ship": {
         "defaults": {},
         "function": "SP_misc_strogg_ship",
@@ -6290,11 +6310,19 @@
         }
       },
       "monster_badass": {
-        "defaults": {},
+        "defaults": {
+          "gib_health": -200.0,
+          "health": 1000.0,
+          "mass": 600.0,
+          "monsterinfo.max_ideal_distance": 1500.0,
+          "yaw_speed": 25.0
+        },
         "function": "SP_monster_badass",
         "spawnflags": {
           "assignments": [],
-          "checks": [],
+          "checks": [
+            8
+          ],
           "clears": [],
           "sets": []
         }
@@ -7899,17 +7927,6 @@
           null
         ]
       },
-      "item_health": {
-        "count": [
-          [
-            {
-              "offset": 596,
-              "value": 10
-            }
-          ],
-          null
-        ]
-      },
       "light_mine1": {
         "offset_0x104": [
           [
@@ -9000,6 +9017,17 @@
           null
         ]
       },
+      "misc_screenfader": {
+        "offset_0xf8": [
+          [
+            {
+              "offset": 248,
+              "value": 0
+            }
+          ],
+          null
+        ]
+      },
       "misc_strogg_ship": {
         "offset_0x104": [
           [
@@ -9249,7 +9277,7 @@
               "value": 4294967295
             }
           ],
-          null
+          1000.0
         ],
         "mass": [
           [
@@ -9258,7 +9286,7 @@
               "value": 1000
             }
           ],
-          null
+          600.0
         ],
         "offset_0x104": [
           [
@@ -12064,7 +12092,6 @@
       "key_power_cube",
       "key_pyramid",
       "key_red_key",
-      "misc_screenfader",
       "weapon_bfg",
       "weapon_chaingun",
       "weapon_deatomizer",
@@ -12228,8 +12255,15 @@
           [],
           [
             2,
+            8,
             32,
             64
+          ]
+        ],
+        "sets": [
+          [],
+          [
+            32
           ]
         ]
       },
@@ -12259,6 +12293,22 @@
           [
             8,
             16
+          ]
+        ]
+      },
+      "misc_screenfader": {
+        "checks": [
+          [],
+          [
+            1
+          ]
+        ]
+      },
+      "monster_badass": {
+        "checks": [
+          [],
+          [
+            8
           ]
         ]
       },
