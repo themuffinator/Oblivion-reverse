@@ -24,8 +24,10 @@
 #define CYBORG_FRAME_ATTACK2_END       0x34
 #define CYBORG_FRAME_ATTACK3_START     0x35
 #define CYBORG_FRAME_ATTACK3_END       0x3a
-#define CYBORG_FRAME_PAIN_START        13
-#define CYBORG_FRAME_PAIN_END          14
+#define CYBORG_FRAME_PAIN_STAGGER_START        0x49
+#define CYBORG_FRAME_PAIN_STAGGER_END          0x4e
+#define CYBORG_FRAME_PAIN_RECOVER_START        0x4f
+#define CYBORG_FRAME_PAIN_RECOVER_END          0x51
 #define CYBORG_FRAME_DEATH_START       15
 #define CYBORG_FRAME_DEATH_END         17
 #define CYBORG_STAND_GROUND_DURATION   3.0f
@@ -34,9 +36,10 @@ static int sound_sight;
 static int sound_search;
 static int sound_idle;
 static int sound_step[3];
-static int sound_pain;
+static int sound_pain[2];
 static int sound_death;
-static int sound_attack;
+static int sound_attack[3];
+static int sound_thud;
 
 static void cyborg_step (edict_t *self)
 {
@@ -55,47 +58,108 @@ static void cyborg_search (edict_t *self)
 
 static vec3_t cyborg_flash_offset = {20.0f, 7.0f, 24.0f};
 
-static void cyborg_fire_deatom (edict_t *self)
+/*
+=============
+cyborg_fire_deatom
+
+Fire a deatomizer bolt using the frame-selectable weapon sample recovered from the HLIL snapshot.
+=============
+*/
+static void cyborg_fire_deatom (edict_t *self, int sample_index)
 {
-    vec3_t  start, dir, forward, right, target;
+	vec3_t  start, dir, forward, right, target;
 
-    if (!self->enemy)
-        return;
+	if (!self->enemy)
+		return;
 
-    AngleVectors (self->s.angles, forward, right, NULL);
-    G_ProjectSource (self->s.origin, cyborg_flash_offset, forward, right, start);
+	if (sample_index < 0 || sample_index >= (int) (sizeof (sound_attack) / sizeof (sound_attack[0])))
+		sample_index = 0;
 
-    VectorCopy (self->enemy->s.origin, target);
-    target[2] += self->enemy->viewheight;
+	AngleVectors (self->s.angles, forward, right, NULL);
+	G_ProjectSource (self->s.origin, cyborg_flash_offset, forward, right, start);
 
-    VectorSubtract (target, start, dir);
-    VectorNormalize (dir);
+	VectorCopy (self->enemy->s.origin, target);
+	target[2] += self->enemy->viewheight;
 
-    gi.sound (self, CHAN_WEAPON, sound_attack, 1, ATTN_NORM, 0);
+	VectorSubtract (target, start, dir);
+	VectorNormalize (dir);
 
-    // The original DLL rolled cyborg deatom damage from a narrow band per shot
-    // before spawning a high-speed tracking projectile.  Match that behaviour
-    // here so kill feeds attribute the hits to the proper deatomizer mods.
-    {
-        int     damage;
-        int     splash;
-        const int       speed = 1000;
-        const float     damage_radius = 480.0f;
+	gi.sound (self, CHAN_WEAPON, sound_attack[sample_index], 1.0f, ATTN_NORM, 0.0f);
 
-        damage = 90 + (int) (random () * 30.0f);
-        if (damage > 119)
-            damage = 119;
+	/* The original DLL rolled cyborg deatom damage from a narrow band per shot
+	 * before spawning a high-speed tracking projectile.  Match that behaviour
+	 * here so kill feeds attribute the hits to the proper deatomizer mods.
+	 */
+	{
+		int     damage;
+		int     splash;
+		const int       speed = 1000;
+		const float     damage_radius = 480.0f;
 
-        splash = damage / 2;
+		damage = 90 + (int) (random () * 30.0f);
+		if (damage > 119)
+			damage = 119;
 
-        fire_deatomizer (self, start, dir, damage, speed, damage_radius, splash);
-    }
+		splash = damage / 2;
+
+		fire_deatomizer (self, start, dir, damage, speed, damage_radius, splash);
+	}
 }
 
+/*
+=============
+cyborg_attack_fire_check
+
+Gate deatomizer bursts to visible targets and align the mutatck sample selection with the active firing frame.
+=============
+*/
 static void cyborg_attack_fire_check (edict_t *self)
 {
-    if (visible (self, self->enemy) && range (self, self->enemy) <= RANGE_FAR)
-        cyborg_fire_deatom (self);
+	int     sample_index;
+
+	if (!self->enemy)
+		return;
+
+	if (!visible (self, self->enemy) || range (self, self->enemy) > RANGE_FAR)
+		return;
+
+	switch (self->s.frame)
+	{
+	case CYBORG_FRAME_ATTACK1_START + 1:
+	case CYBORG_FRAME_ATTACK1_START + 4:
+	case CYBORG_FRAME_ATTACK2_START + 4:
+	case CYBORG_FRAME_ATTACK3_START + 4:
+		sample_index = 0;
+		break;
+
+	case CYBORG_FRAME_ATTACK1_START + 3:
+	case CYBORG_FRAME_ATTACK1_START + 8:
+	case CYBORG_FRAME_ATTACK2_START + 1:
+	case CYBORG_FRAME_ATTACK3_START + 1:
+		sample_index = 1;
+		break;
+
+	case CYBORG_FRAME_ATTACK1_START + 6:
+	case CYBORG_FRAME_ATTACK1_START + 10:
+	case CYBORG_FRAME_ATTACK3_START + 2:
+	default:
+		sample_index = 2;
+		break;
+	}
+
+	cyborg_fire_deatom (self, sample_index);
+}
+
+/*
+=============
+cyborg_land
+
+Play the heavy landing thud captured in the retail animation callbacks.
+=============
+*/
+static void cyborg_land (edict_t *self)
+{
+	gi.sound (self, CHAN_WEAPON, sound_thud, 1.0f, ATTN_NORM, 0.0f);
 }
 
 static void cyborg_idle_loop (edict_t *self);
@@ -141,10 +205,26 @@ static mmove_t cyborg_move_run = {
 	CYBORG_FRAME_RUN_START, CYBORG_FRAME_RUN_END, cyborg_frames_run, cyborg_locomotion_resume
 };
 
+static mframe_t cyborg_frames_pain_stagger[] = {
+	{ai_move, 0.0f, NULL},
+	{ai_move, 0.0f, NULL},
+	{ai_move, 0.0f, NULL},
+	{ai_move, 0.0f, NULL},
+	{ai_move, 0.0f, NULL},
+	{ai_move, 0.0f, NULL}
+};
+static mmove_t cyborg_move_pain_stagger = {
+	CYBORG_FRAME_PAIN_STAGGER_START, CYBORG_FRAME_PAIN_STAGGER_END, cyborg_frames_pain_stagger, cyborg_locomotion_resume
+};
+
+static mmove_t cyborg_move_pain_recover = {
+	CYBORG_FRAME_PAIN_RECOVER_START, CYBORG_FRAME_PAIN_RECOVER_END, cyborg_frames_run, cyborg_locomotion_resume
+};
+
 static void cyborg_attack_finished (edict_t *self);
 
 static mframe_t cyborg_frames_attack_primary[] = {
-    {ai_charge, 0, NULL},
+    {ai_charge, 0, cyborg_land},
     {ai_charge, 0, cyborg_attack_fire_check},
     {ai_charge, 0, NULL},
     {ai_charge, 0, cyborg_attack_fire_check},
@@ -162,7 +242,7 @@ static mmove_t cyborg_move_attack_primary = {
 };
 
 static mframe_t cyborg_frames_attack_secondary[] = {
-    {ai_charge, 0, NULL},
+    {ai_charge, 0, cyborg_land},
     {ai_charge, 0, cyborg_attack_fire_check},
     {ai_charge, 0, NULL},
     {ai_charge, 0, NULL},
@@ -174,12 +254,12 @@ static mmove_t cyborg_move_attack_secondary = {
 };
 
 static mframe_t cyborg_frames_attack_barrage[] = {
-	{ai_charge, 0, NULL},
-	{ai_charge, 0, cyborg_attack_fire_check},
-	{ai_charge, 0, cyborg_attack_fire_check},
-	{ai_charge, 0, NULL},
-	{ai_charge, 0, cyborg_attack_fire_check},
-	{ai_charge, 0, NULL}
+    {ai_charge, 0, cyborg_land},
+    {ai_charge, 0, cyborg_attack_fire_check},
+    {ai_charge, 0, cyborg_attack_fire_check},
+    {ai_charge, 0, NULL},
+    {ai_charge, 0, cyborg_attack_fire_check},
+    {ai_charge, 0, NULL}
 };
 static mmove_t cyborg_move_attack_barrage = {
 	CYBORG_FRAME_ATTACK3_START, CYBORG_FRAME_ATTACK3_END, cyborg_frames_attack_barrage, cyborg_attack_finished
@@ -416,22 +496,33 @@ static void cyborg_attack_finished (edict_t *self)
 		cyborg_locomotion_stage (self);
 }
 
+/*
+=============
+cyborg_pain
+
+Mirror the retail stagger handler by enforcing the dedicated cooldown,
+alternating the voice samples, and branching into the extended mmove
+tables recovered from the HLIL dump.
+=============
+*/
 static void cyborg_pain (edict_t *self, edict_t *other, float kick, int damage)
 {
-	static mframe_t pain_frames[] = {
-		{ai_move, 0, NULL},
-		{ai_move, 0, NULL}
-	};
-	static mmove_t pain_move = {CYBORG_FRAME_PAIN_START, CYBORG_FRAME_PAIN_END, pain_frames, cyborg_run};
+	int	slot;
 
-	cyborg_wound_stand_ground (self);
-
-	if (level.time < self->pain_debounce_time)
+	if (level.time < self->oblivion.cyborg_pain_time)
 		return;
 
-	self->pain_debounce_time = level.time + 2.0f;
-	gi.sound (self, CHAN_VOICE, sound_pain, 1, ATTN_NORM, 0);
-	self->monsterinfo.currentmove = &pain_move;
+	self->oblivion.cyborg_pain_time = level.time + 3.0f;
+	self->pain_debounce_time = self->oblivion.cyborg_pain_time;
+
+	slot = self->oblivion.cyborg_pain_slot & 1;
+	gi.sound (self, CHAN_VOICE, sound_pain[slot], 1, ATTN_NORM, 0);
+	self->oblivion.cyborg_pain_slot ^= 1;
+
+	if (damage > 40 || random () > 0.5f)
+		self->monsterinfo.currentmove = &cyborg_move_pain_stagger;
+	else
+		self->monsterinfo.currentmove = &cyborg_move_pain_recover;
 }
 
 static void cyborg_dead (edict_t *self)
@@ -485,9 +576,13 @@ void SP_monster_cyborg (edict_t *self)
     sound_sight = gi.soundindex ("cyborg/mutsght1.wav");
     sound_search = gi.soundindex ("cyborg/mutsrch1.wav");
     sound_idle = gi.soundindex ("cyborg/mutidle1.wav");
-    sound_pain = gi.soundindex ("cyborg/mutpain1.wav");
+	sound_pain[0] = gi.soundindex ("cyborg/mutpain1.wav");
+	sound_pain[1] = gi.soundindex ("cyborg/mutpain2.wav");
     sound_death = gi.soundindex ("cyborg/mutdeth1.wav");
-    sound_attack = gi.soundindex ("deatom/dfire.wav");
+	sound_attack[0] = gi.soundindex ("cyborg/mutatck1.wav");
+	sound_attack[1] = gi.soundindex ("cyborg/mutatck2.wav");
+	sound_attack[2] = gi.soundindex ("cyborg/mutatck3.wav");
+	sound_thud = gi.soundindex ("mutant/thud1.wav");
     sound_step[0] = gi.soundindex ("cyborg/step1.wav");
     sound_step[1] = gi.soundindex ("cyborg/step2.wav");
     sound_step[2] = gi.soundindex ("cyborg/step3.wav");
@@ -500,8 +595,10 @@ void SP_monster_cyborg (edict_t *self)
 	self->oblivion.cyborg_anchor_time = 0.0f;
 	self->oblivion.cyborg_anchor_stage = 0;
 
+	self->oblivion.cyborg_pain_time = 0.0f;
+	self->oblivion.cyborg_pain_slot = 0;
 	self->pain = cyborg_pain;
-	self->die = cyborg_die;
+    self->die = cyborg_die;
 
     self->monsterinfo.stand = cyborg_stand;
     self->monsterinfo.idle = cyborg_stand;
