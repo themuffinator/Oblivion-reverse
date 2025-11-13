@@ -198,6 +198,137 @@ class CyborgRegressionTests(unittest.TestCase):
                 msg=f"{function_name} no longer routes through cyborg_land",
             )
 
+    def test_pain_calls_wound_anchor_before_cooldown(self) -> None:
+        block = extract_function_block(self.source_text, "cyborg_pain")
+        call_index = block.find("cyborg_wound_stand_ground (self);")
+        self.assertNotEqual(
+            call_index,
+            -1,
+            "cyborg_pain must call cyborg_wound_stand_ground to manage anchor state",
+        )
+        guard_index = block.find("if (level.time < self->oblivion.cyborg_pain_time)")
+        self.assertNotEqual(
+            guard_index,
+            -1,
+            "Pain cooldown guard missing from cyborg_pain",
+        )
+        self.assertLess(
+            call_index,
+            guard_index,
+            "Stand-ground wound handler must execute before the cooldown short-circuit",
+        )
+
+    def test_wound_stand_ground_stage_progression(self) -> None:
+        block = extract_function_block(self.source_text, "cyborg_wound_stand_ground")
+        stage_two_condition = block.find("self->health <= max_health / 4")
+        self.assertNotEqual(
+            stage_two_condition,
+            -1,
+            "Missing quarter-health check for advanced anchor stage",
+        )
+        stage_two_assignment = block.find(
+            "self->oblivion.cyborg_anchor_stage = 2;",
+            stage_two_condition,
+        )
+        self.assertNotEqual(
+            stage_two_assignment,
+            -1,
+            "Stage 2 anchor assignment missing",
+        )
+        stage_two_schedule = block.find(
+            "cyborg_schedule_stand_ground (self, CYBORG_STAND_GROUND_DURATION);",
+            stage_two_assignment,
+        )
+        self.assertNotEqual(
+            stage_two_schedule,
+            -1,
+            "Stage 2 branch must schedule the stand-ground anchor",
+        )
+        stage_one_condition = block.find("self->health <= max_health / 2")
+        self.assertNotEqual(
+            stage_one_condition,
+            -1,
+            "Missing half-health check for initial anchor stage",
+        )
+        stage_one_assignment = block.find(
+            "self->oblivion.cyborg_anchor_stage = 1;",
+            stage_one_condition,
+        )
+        self.assertNotEqual(
+            stage_one_assignment,
+            -1,
+            "Stage 1 anchor assignment missing",
+        )
+        stage_one_schedule = block.find(
+            "cyborg_schedule_stand_ground (self, CYBORG_STAND_GROUND_DURATION);",
+            stage_one_assignment,
+        )
+        self.assertNotEqual(
+            stage_one_schedule,
+            -1,
+            "Stage 1 branch must schedule the stand-ground anchor",
+        )
+        self.assertLess(
+            stage_one_condition,
+            stage_one_assignment,
+            "Stage 1 assignment should occur after the half-health guard",
+        )
+
+    def test_schedule_stand_ground_extends_anchor_timer(self) -> None:
+        block = extract_function_block(self.source_text, "cyborg_schedule_stand_ground")
+        self.assertIn(
+            "self->monsterinfo.aiflags |= AI_STAND_GROUND;",
+            block,
+            "Schedule helper must enable the stand-ground flag",
+        )
+        self.assertIn(
+            "self->oblivion.cyborg_landing_thud = true;",
+            block,
+            "Schedule helper should defer the landing thud",
+        )
+        self.assertIn(
+            "anchor_expire = level.time + duration;",
+            block,
+            "Anchor expiration calculation missing",
+        )
+        self.assertIn(
+            "self->oblivion.cyborg_anchor_time <= level.time",
+            block,
+            "Anchor extension guard should compare against the current timer",
+        )
+        self.assertIn(
+            "self->oblivion.cyborg_anchor_time < anchor_expire",
+            block,
+            "Anchor extension guard should favour longer durations",
+        )
+
+    def test_locomotion_respects_anchor_state(self) -> None:
+        for function_name in ("cyborg_locomotion_stage", "cyborg_locomotion_resume"):
+            block = extract_function_block(self.source_text, function_name)
+            anchor_index = block.find("if (self->monsterinfo.aiflags & AI_STAND_GROUND)")
+            self.assertNotEqual(
+                anchor_index,
+                -1,
+                f"{function_name} must gate movement on the stand-ground flag",
+            )
+            stand_call_index = block.find("cyborg_stand (self);", anchor_index)
+            self.assertNotEqual(
+                stand_call_index,
+                -1,
+                f"{function_name} should park the cyborg in place while anchored",
+            )
+            enemy_index = block.find("if (!self->enemy)")
+            self.assertNotEqual(
+                enemy_index,
+                -1,
+                f"{function_name} lost the idle/return branch",
+            )
+            self.assertLess(
+                anchor_index,
+                enemy_index,
+                f"{function_name} must prioritize the anchor guard before enemy logic",
+            )
+
         schedule_block = extract_function_block(
             self.source_text, "cyborg_schedule_stand_ground"
         )

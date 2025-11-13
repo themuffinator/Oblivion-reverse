@@ -516,6 +516,8 @@ static void cyborg_pain (edict_t *self, edict_t *other, float kick, int damage)
 {
 	int	slot;
 
+	cyborg_wound_stand_ground (self);
+
 	if (level.time < self->oblivion.cyborg_pain_time)
 		return;
 
