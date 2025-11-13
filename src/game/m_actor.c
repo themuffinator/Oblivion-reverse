@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "m_actor.h"
 
 #define	MAX_ACTOR_NAMES		8
+#define ACTOR_CHAT_COOLDOWN	2.0f
 
 /*
  * Oblivion extends the Quake II actor AI flags with additional high bits
@@ -72,25 +73,52 @@ static const char *Actor_DisplayName(edict_t *self)
         return Actor_FallbackName(self);
 }
 
+/*
+=============
+Actor_ResetChatCooldown
+
+Allow the actor to speak immediately by rewinding the broadcast timer.
+=============
+*/
+static void Actor_ResetChatCooldown(edict_t *self)
+{
+	if (!self)
+		return;
+
+	self->oblivion.custom_name_time = level.time - ACTOR_CHAT_COOLDOWN;
+}
+
+/*
+=============
+Actor_BroadcastMessage
+
+Broadcast a chat line to every active client while honouring the cooldown
+timer stored in the oblivion extension.
+=============
+*/
 static void Actor_BroadcastMessage(edict_t *self, const char *message)
 {
-        const char *name;
-        int i;
+	const char *name;
+	int i;
 
-        if (!self || !message || !message[0])
-                return;
+	if (!self || !message || !message[0])
+		return;
 
-        name = Actor_DisplayName(self);
+	if (self->oblivion.custom_name_time > level.time)
+		return;
 
-        for (i = 1; i <= game.maxclients; i++)
-        {
-                edict_t *ent = &g_edicts[i];
+	name = Actor_DisplayName(self);
+	self->oblivion.custom_name_time = level.time + ACTOR_CHAT_COOLDOWN;
 
-                if (!ent->inuse)
-                        continue;
+	for (i = 1; i <= game.maxclients; i++)
+	{
+		edict_t *ent = &g_edicts[i];
 
-                gi.cprintf(ent, PRINT_CHAT, "%s: %s\n", name, message);
-        }
+		if (!ent->inuse)
+			continue;
+
+		gi.cprintf(ent, PRINT_CHAT, "%s: %s\n", name, message);
+	}
 }
 
 static void Actor_ConfigureMovementState(edict_t *self)
@@ -588,6 +616,7 @@ actor resumes scripted motion when activated.
 */
 static void Actor_UseOblivion(edict_t *self, edict_t *other, edict_t *activator)
 {
+	Actor_ResetChatCooldown(self);
 	edict_t *target = G_PickTarget(self->target);
 
 	self->goalentity = target;
@@ -640,6 +669,7 @@ static qboolean Actor_SpawnOblivion(edict_t *self)
 	VectorSet(self->maxs, 16, 16, 32);
 
 	Actor_ConfigureMovementState(self);
+	Actor_ResetChatCooldown(self);
 
 	if (!(self->spawnflags & ACTOR_SPAWNFLAG_CORPSE))
 	{
