@@ -71,15 +71,9 @@ class RepoSpawnInfo:
 class HLILParser:
     def __init__(self, path: Path):
         self.path = path
-        split_root = self.path.parent / "split"
-        source_paths: List[Path] = [self.path]
-        if split_root.exists():
-            extra_paths = sorted(split_root.glob("**/*.txt"))
-            source_paths.extend(extra_paths)
-
         self._sources: List[Tuple[Path, List[str]]] = []
         self.lines: List[str] = []
-        for source_path in source_paths:
+        for source_path in self._iter_source_paths():
             source_lines = source_path.read_text(encoding="utf-8", errors="replace").splitlines()
             self._sources.append((source_path, source_lines))
             self.lines.extend(source_lines)
@@ -89,6 +83,13 @@ class HLILParser:
         self._spawn_map: Optional[Dict[str, str]] = None
 
     # -- general helpers --
+    def _iter_source_paths(self) -> Iterable[Path]:
+        yield self.path
+        split_root = self.path.parent / "split"
+        if split_root.is_dir():
+            for extra_path in sorted(split_root.rglob("*.txt")):
+                yield extra_path
+
     @property
     def function_blocks(self) -> Dict[str, List[str]]:
         if self._function_blocks is None:
