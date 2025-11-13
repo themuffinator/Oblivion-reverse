@@ -42,6 +42,19 @@ class HLILParserSpawnMapStrcmpTest(unittest.TestCase):
             self.assertIn(classname, spawn_map)
             self.assertEqual(spawn_map[classname], func)
 
+    def test_extracts_spawn_entries_with_nested_gotos(self) -> None:
+        parser = HLILParser(Path("references/HLIL/oblivion/gamex86.dll_hlil.txt"))
+
+        block = parser.function_blocks["sub_10031d70"]
+        entries = parser._extract_spawn_map_from_strcmp(block)
+
+        self.assertIn("misc_actor", entries)
+        self.assertEqual(entries["misc_actor"], "sub_10037cd0")
+
+        spawn_map = parser.spawn_map
+        self.assertIn("misc_actor", spawn_map)
+        self.assertEqual(spawn_map["misc_actor"], "sub_10037cd0")
+
 
 if __name__ == "__main__":
     unittest.main()
