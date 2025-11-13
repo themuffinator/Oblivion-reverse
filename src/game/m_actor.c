@@ -93,7 +93,7 @@ static void Actor_ResetChatCooldown(edict_t *self)
 Actor_BroadcastMessage
 
 Broadcast a chat line to every active client while honouring the cooldown
-timer stored in the oblivion extension.
+	imer stored in the oblivion extension.
 =============
 */
 static void Actor_BroadcastMessage(edict_t *self, const char *message)
@@ -171,6 +171,12 @@ following its scripted path.  Clear any idle flags that indicate the
 actor is waiting at the end of a path.
 =============
 */
+static void Actor_PathAdvance(edict_t *self);
+static void Actor_PathScheduleIdle(edict_t *self);
+static void Actor_PathThink(edict_t *self);
+static void Actor_PathUpdateMotion(edict_t *self);
+static void Actor_PathReached(edict_t *self, edict_t *node, edict_t *next_target);
+
 static qboolean Actor_AttachController(edict_t *self, edict_t *controller)
 {
 	vec3_t dir;
@@ -183,7 +189,7 @@ static qboolean Actor_AttachController(edict_t *self, edict_t *controller)
 	self->monsterinfo.aiflags &= ~AI_ACTOR_PATH_IDLE;
 
 	if (!controller || !controller->classname
-		|| strcmp(controller->classname, "target_actor") != 0)
+			|| strcmp(controller->classname, "target_actor") != 0)
 	{
 		self->goalentity = NULL;
 		self->movetarget = NULL;
@@ -198,9 +204,287 @@ static qboolean Actor_AttachController(edict_t *self, edict_t *controller)
 	self->oblivion.last_controller = controller;
 	self->oblivion.controller_distance = VectorLength(dir);
 	self->oblivion.controller_resume = level.time;
+	self->oblivion.controller_serial = (int)(controller - g_edicts);
+	self->oblivion.path_state = ACTOR_PATH_STATE_SEEKING;
+	self->oblivion.path_time = level.time;
+	if (self->oblivion.path_speed <= 0.0f)
+		self->oblivion.path_speed = self->speed;
+	self->oblivion.path_step_speed = self->oblivion.path_speed;
+	self->oblivion.path_remaining = self->oblivion.controller_distance;
+	Actor_PathUpdateMotion(self);
 
 	return true;
 }
+
+/*
+=============
+Actor_PathScheduleIdle
+
+Randomise the next update window while the actor idles between scripted
+path segments.
+=============
+*/
+static void Actor_PathScheduleIdle(edict_t *self)
+{
+	int frames;
+
+	if (!self)
+		return;
+
+	frames = (rand() & 0xf) + 0xa;
+	self->oblivion.path_time = level.time + (frames * FRAMETIME);
+	self->oblivion.path_state = ACTOR_PATH_STATE_IDLE;
+	self->monsterinfo.aiflags |= AI_ACTOR_PATH_IDLE;
+
+	if (self->monsterinfo.stand)
+		self->monsterinfo.stand(self);
+}
+
+/*
+=============
+Actor_PathUpdateMotion
+
+Maintain the cached direction, speed, and velocity used while
+approaching the active controller.
+=============
+*/
+static void Actor_PathUpdateMotion(edict_t *self)
+{
+	vec3_t delta;
+	float distance;
+	float speed;
+
+	if (!self)
+		return;
+
+	if (!self->oblivion.controller)
+	{
+		VectorClear(self->oblivion.path_dir);
+		VectorClear(self->oblivion.path_velocity);
+		self->oblivion.path_remaining = 0.0f;
+		return;
+	}
+
+	VectorSubtract(self->oblivion.controller->s.origin, self->s.origin, delta);
+	distance = VectorLength(delta);
+	self->oblivion.controller_distance = distance;
+	self->oblivion.path_remaining = distance;
+
+	if (distance <= 0.0f)
+	{
+		VectorClear(self->oblivion.path_dir);
+		VectorClear(self->oblivion.path_velocity);
+		return;
+	}
+
+	VectorScale(delta, 1.0f / distance, self->oblivion.path_dir);
+	speed = self->oblivion.path_step_speed;
+	if (speed <= 0.0f)
+	{
+		speed = self->oblivion.path_speed;
+		if (speed <= 0.0f)
+			speed = self->speed;
+		self->oblivion.path_step_speed = speed;
+	}
+	VectorScale(self->oblivion.path_dir, speed, self->oblivion.path_velocity);
+}
+
+/*
+=============
+Actor_PathExecuteScripts
+
+Fire any pending scripted actions associated with the previous
+controller node.
+=============
+*/
+static void Actor_PathExecuteScripts(edict_t *self)
+{
+	char *saved_target;
+
+	if (!self || !self->oblivion.prev_path)
+		return;
+
+	if (!self->oblivion.prev_path->pathtarget || !self->oblivion.script_target)
+	{
+		self->oblivion.script_target = NULL;
+		return;
+	}
+
+	saved_target = self->oblivion.prev_path->target;
+	self->oblivion.prev_path->target = self->oblivion.prev_path->pathtarget;
+	G_UseTargets(self->oblivion.prev_path, self);
+	self->oblivion.prev_path->target = saved_target;
+	self->oblivion.script_target = NULL;
+}
+
+/*
+=============
+Actor_PathAdvance
+
+Advance to the next controller node once any waits, holds, and scripted
+actions have completed.
+=============
+*/
+static void Actor_PathAdvance(edict_t *self)
+{
+	edict_t *next;
+
+	if (!self)
+		return;
+
+	Actor_PathExecuteScripts(self);
+
+	next = self->oblivion.path_target;
+	self->oblivion.path_target = NULL;
+
+	if (next && Actor_AttachController(self, next))
+	{
+		self->monsterinfo.aiflags &= ~AI_ACTOR_PATH_IDLE;
+		if (self->monsterinfo.run)
+			self->monsterinfo.run(self);
+		return;
+	}
+
+	self->oblivion.controller = NULL;
+	self->oblivion.controller_serial = 0;
+	VectorClear(self->oblivion.path_dir);
+	VectorClear(self->oblivion.path_velocity);
+	self->oblivion.path_state = ACTOR_PATH_STATE_IDLE;
+	self->monsterinfo.aiflags |= AI_ACTOR_PATH_IDLE;
+	if (self->monsterinfo.stand)
+		self->monsterinfo.stand(self);
+}
+
+/*
+=============
+Actor_PathReached
+
+Update the internal state machine after reaching a target_actor node.
+=============
+*/
+static void Actor_PathReached(edict_t *self, edict_t *node, edict_t *next_target)
+{
+	float override_wait;
+	float wait_time;
+	qboolean hold_position;
+
+	if (!self)
+		return;
+
+	self->oblivion.prev_path = node;
+	self->oblivion.path_target = next_target;
+	self->oblivion.controller_serial = next_target ? (int)(next_target - g_edicts) : 0;
+	self->oblivion.script_target = (node && node->pathtarget) ? node : NULL;
+	VectorClear(self->oblivion.path_velocity);
+
+	if (!node)
+	{
+		self->oblivion.path_wait_time = -1.0f;
+		self->oblivion.path_state = ACTOR_PATH_STATE_IDLE;
+		self->monsterinfo.aiflags |= AI_ACTOR_PATH_IDLE;
+		return;
+	}
+
+	override_wait = self->oblivion.path_wait_time;
+	if (override_wait < 0.0f)
+		override_wait = node->wait;
+	wait_time = (override_wait > 0.0f) ? override_wait : 0.0f;
+	self->oblivion.path_wait_time = -1.0f;
+
+	hold_position = (node->spawnflags & TARGET_ACTOR_FLAG_HOLD) != 0;
+	if (self->enemy)
+	{
+		self->oblivion.path_state = ACTOR_PATH_STATE_SCRIPT_WAIT;
+		self->oblivion.path_time = level.time;
+		return;
+	}
+
+	if (hold_position)
+	{
+		self->oblivion.path_toggle = 1;
+		self->oblivion.path_state = ACTOR_PATH_STATE_LOCKED;
+		self->oblivion.path_time = level.time;
+		return;
+	}
+
+	if (wait_time > 0.0f)
+	{
+		self->oblivion.path_time = level.time + wait_time;
+		self->oblivion.path_state = ACTOR_PATH_STATE_WAITING;
+		self->monsterinfo.aiflags |= AI_ACTOR_PATH_IDLE;
+		if (self->monsterinfo.stand)
+			self->monsterinfo.stand(self);
+		return;
+	}
+
+	self->oblivion.path_state = ACTOR_PATH_STATE_SEEKING;
+	if (next_target)
+		Actor_AttachController(self, next_target);
+	else
+		Actor_PathScheduleIdle(self);
+}
+
+/*
+=============
+Actor_PathThink
+
+Advance the scripted path state machine each frame.
+=============
+*/
+static void Actor_PathThink(edict_t *self)
+{
+	edict_t *candidate;
+
+	if (!self || !self->inuse)
+		return;
+
+	if (self->deadflag)
+		return;
+
+	if (!self->oblivion.controller && self->oblivion.controller_serial > 0)
+	{
+		candidate = &g_edicts[self->oblivion.controller_serial];
+		if (candidate->inuse)
+			Actor_AttachController(self, candidate);
+	}
+
+	Actor_PathUpdateMotion(self);
+
+	switch (self->oblivion.path_state)
+	{
+	case ACTOR_PATH_STATE_WAITING:
+		if (level.time >= self->oblivion.path_time)
+		{
+		self->oblivion.path_state = ACTOR_PATH_STATE_SEEKING;
+		Actor_PathAdvance(self);
+		}
+		break;
+	case ACTOR_PATH_STATE_SCRIPT_WAIT:
+		if (self->enemy && self->enemy->inuse && self->enemy->health > 0)
+		break;
+
+		self->enemy = NULL;
+		self->oblivion.path_state = ACTOR_PATH_STATE_SEEKING;
+		Actor_PathAdvance(self);
+		break;
+	case ACTOR_PATH_STATE_LOCKED:
+		if (self->oblivion.path_toggle == 0)
+		{
+		self->oblivion.path_state = ACTOR_PATH_STATE_SEEKING;
+		Actor_PathAdvance(self);
+		}
+		break;
+	case ACTOR_PATH_STATE_SEEKING:
+		if (!self->oblivion.controller && self->oblivion.path_target)
+		Actor_PathAdvance(self);
+		break;
+	default:
+		break;
+	}
+
+	self->nextthink = level.time + FRAMETIME;
+}
+
 
 mframe_t actor_frames_stand [] =
 {
@@ -278,6 +562,13 @@ mmove_t actor_move_walk = {FRAME_walk01, FRAME_walk08, actor_frames_walk, NULL};
 
 void actor_walk (edict_t *self)
 {
+	if (!self)
+		return;
+
+	self->monsterinfo.aiflags &= ~AI_ACTOR_PATH_IDLE;
+	if (self->oblivion.path_state == ACTOR_PATH_STATE_IDLE)
+		self->oblivion.path_state = ACTOR_PATH_STATE_SEEKING;
+
 	self->monsterinfo.currentmove = &actor_move_walk;
 }
 
@@ -309,6 +600,15 @@ resuming scripted movement after scripted attacks.
 */
 void actor_run (edict_t *self)
 {
+	if (!self)
+		return;
+
+	if (self->monsterinfo.aiflags & AI_ACTOR_PATH_IDLE)
+	{
+		if (self->oblivion.path_state != ACTOR_PATH_STATE_IDLE)
+			self->monsterinfo.aiflags &= ~AI_ACTOR_PATH_IDLE;
+	}
+
 	if (self->monsterinfo.aiflags & AI_ACTOR_SHOOT_ONCE)
 	{
 		self->monsterinfo.aiflags &= ~(AI_ACTOR_SHOOT_ONCE | AI_STAND_GROUND);
@@ -591,6 +891,9 @@ void actor_use (edict_t *self, edict_t *other, edict_t *activator)
 	(void)other;
 	(void)activator;
 
+	self->think = Actor_PathThink;
+	self->nextthink = level.time + FRAMETIME;
+
 	controller = G_PickTarget(self->target);
 	if (!Actor_AttachController(self, controller))
 	{
@@ -617,11 +920,27 @@ actor resumes scripted motion when activated.
 static void Actor_UseOblivion(edict_t *self, edict_t *other, edict_t *activator)
 {
 	Actor_ResetChatCooldown(self);
+	(void)other;
+	(void)activator;
+
+	if (!self)
+		return;
+
+	self->think = Actor_PathThink;
+	self->nextthink = level.time + FRAMETIME;
+
 	edict_t *target = G_PickTarget(self->target);
 
 	self->goalentity = target;
 	self->movetarget = target;
 	self->monsterinfo.aiflags &= ~AI_ACTOR_PATH_IDLE;
+
+	if (self->oblivion.path_state == ACTOR_PATH_STATE_LOCKED)
+	{
+		self->oblivion.path_toggle = 0;
+		self->oblivion.path_state = ACTOR_PATH_STATE_SEEKING;
+		Actor_PathAdvance(self);
+	}
 
 	if (target && target->classname && strcmp(target->classname, "target_actor") == 0)
 	{
@@ -631,7 +950,7 @@ static void Actor_UseOblivion(edict_t *self, edict_t *other, edict_t *activator)
 		self->s.angles[YAW] = self->ideal_yaw = vectoyaw(delta);
 
 		if (self->monsterinfo.walk)
-			self->monsterinfo.walk(self);
+		self->monsterinfo.walk(self);
 
 		self->target = NULL;
 		return;
@@ -641,8 +960,9 @@ static void Actor_UseOblivion(edict_t *self, edict_t *other, edict_t *activator)
 	self->monsterinfo.pausetime = 100000000.0f;
 
 	if (self->monsterinfo.stand)
-		self->monsterinfo.stand(self);
+	self->monsterinfo.stand(self);
 }
+
 
 static qboolean Actor_SpawnOblivion(edict_t *self)
 {
@@ -662,6 +982,22 @@ static qboolean Actor_SpawnOblivion(edict_t *self)
 
 	self->s.modelindex = 0xff;
 	self->s.modelindex2 = 0xff;
+
+	self->oblivion.controller = NULL;
+	self->oblivion.last_controller = NULL;
+	self->oblivion.prev_path = NULL;
+	self->oblivion.path_target = NULL;
+	self->oblivion.script_target = NULL;
+	self->oblivion.controller_serial = 0;
+	self->oblivion.path_toggle = 0;
+	self->oblivion.path_wait_time = -1.0f;
+	self->oblivion.path_time = level.time;
+	self->oblivion.path_speed = self->speed;
+	self->oblivion.path_step_speed = 0.0f;
+	self->oblivion.path_remaining = 0.0f;
+	self->oblivion.path_state = ACTOR_PATH_STATE_IDLE;
+	VectorClear(self->oblivion.path_dir);
+	VectorClear(self->oblivion.path_velocity);
 
 	self->movetype = MOVETYPE_STEP;
 	self->solid = SOLID_BBOX;
@@ -732,6 +1068,8 @@ static qboolean Actor_SpawnOblivion(edict_t *self)
 
 	gi.linkentity(self);
 	walkmonster_start(self);
+	self->think = Actor_PathThink;
+	self->nextthink = level.time + FRAMETIME;
 
 	if (self->spawnflags & ACTOR_SPAWNFLAG_START_ON)
 	{
@@ -774,7 +1112,7 @@ for JUMP only:
 
 /*
 =============
-target_actor_touch
+	arget_actor_touch
 
 Handle scripted path targets and immediate actions when an actor
 reaches a target_actor waypoint.
@@ -782,9 +1120,12 @@ reaches a target_actor waypoint.
 */
 void target_actor_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
 {
-	vec3_t	v;
-	edict_t	*pathtarget_ent;
-	edict_t	*next_target;
+	vec3_t v;
+	edict_t *pathtarget_ent;
+	edict_t *next_target;
+
+	(void)plane;
+	(void)surf;
 
 	if (other->movetarget != self)
 		return;
@@ -800,11 +1141,9 @@ void target_actor_touch (edict_t *self, edict_t *other, cplane_t *plane, csurfac
 		pathtarget_ent = G_PickTarget(self->pathtarget);
 
 	if (self->message)
-	{
 		Actor_BroadcastMessage(other, self->message);
-	}
 
-	if (self->spawnflags & 1)		//jump
+	if (self->spawnflags & 1)
 	{
 		other->velocity[0] = self->movedir[0] * self->speed;
 		other->velocity[1] = self->movedir[1] * self->speed;
@@ -817,7 +1156,7 @@ void target_actor_touch (edict_t *self, edict_t *other, cplane_t *plane, csurfac
 		}
 	}
 
-	if (self->spawnflags & 2)	//shoot
+	if (self->spawnflags & 2)
 	{
 		if (self->pathtarget)
 			pathtarget_ent = G_PickTarget(self->pathtarget);
@@ -837,7 +1176,7 @@ void target_actor_touch (edict_t *self, edict_t *other, cplane_t *plane, csurfac
 		else
 			actor_attack(other);
 	}
-	else if (self->spawnflags & 4)	//attack
+	else if (self->spawnflags & 4)
 	{
 		other->enemy = pathtarget_ent;
 		if (other->enemy)
@@ -848,43 +1187,29 @@ void target_actor_touch (edict_t *self, edict_t *other, cplane_t *plane, csurfac
 			if (self->spawnflags & 0x12)
 			{
 				other->monsterinfo.aiflags |= AI_STAND_GROUND;
-				actor_stand (other);
+				actor_stand(other);
 			}
 			else
 			{
-				actor_run (other);
+				actor_run(other);
 			}
 		}
-	}
-
-	if (self->pathtarget)
-	{
-		char *savetarget;
-
-		savetarget = self->target;
-		self->target = self->pathtarget;
-		G_UseTargets (self, other);
-		self->target = savetarget;
 	}
 
 	next_target = G_PickTarget(self->target);
 	other->movetarget = next_target;
 
-	if (!other->goalentity)
-		other->goalentity = other->movetarget;
+	Actor_PathReached(other, self, next_target);
 
-	if (!other->movetarget && !other->enemy)
+	if (next_target && next_target == other->goalentity)
 	{
-		other->monsterinfo.pausetime = level.time + 100000000;
-		other->monsterinfo.aiflags |= AI_ACTOR_PATH_IDLE;
-		other->monsterinfo.stand (other);
-	}
-	else if (other->movetarget == other->goalentity)
-	{
-		VectorSubtract (other->movetarget->s.origin, other->s.origin, v);
-		other->ideal_yaw = vectoyaw (v);
+		VectorSubtract(next_target->s.origin, other->s.origin, v);
+		other->ideal_yaw = vectoyaw(v);
 	}
 }
+
+
+
  
 void SP_target_actor (edict_t *self)
 {
