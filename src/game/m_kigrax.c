@@ -36,6 +36,13 @@ enum
 	KIGRAX_FRAME_DEATH_END = 14
 };
 
+#define KIGRAX_DEFAULT_MIN_Z	-32.0f
+#define KIGRAX_DEFAULT_MAX_Z	12.0f
+#define KIGRAX_ATTACK_MAX_Z	0.0f
+
+static const float kigrax_salvo_yaw_offsets[] = {0.0f, 0.0f, 0.0f, 0.0f};
+static const float kigrax_salvo_pitch_offsets[] = {0.0f, 0.0f, 0.0f, 0.0f};
+
 static int sound_sight;
 static int sound_search;
 static int sound_idle;
@@ -43,13 +50,13 @@ static int sound_pain;
 static int sound_death;
 static int sound_attack;
 
-static vec3_t kigrax_flash_offset = {12.0f, 0.0f, -6.0f};
-
 static void kigrax_idle_select (edict_t *self);
 static void kigrax_walk_select (edict_t *self);
 static void kigrax_run_select (edict_t *self);
 static void kigrax_attack_execute (edict_t *self);
 static void kigrax_fire (edict_t *self);
+static void kigrax_attack_cleanup (edict_t *self);
+static void kigrax_set_attack_hull (edict_t *self, qboolean crouched);
 static void kigrax_deadthink (edict_t *self);
 
 static mframe_t kigrax_frames_hover[KIGRAX_FRAME_IDLE_END - KIGRAX_FRAME_IDLE_START + 1];
@@ -104,10 +111,10 @@ static mmove_t kigrax_move_attack_prep = {
 	kigrax_attack_execute
 };
 static mmove_t kigrax_move_attack = {
-	KIGRAX_FRAME_ATTACK_START,
-	KIGRAX_FRAME_ATTACK_END,
-	kigrax_frames_attack,
-	kigrax_run_select
+KIGRAX_FRAME_ATTACK_START,
+KIGRAX_FRAME_ATTACK_END,
+kigrax_frames_attack,
+kigrax_attack_cleanup
 };
 
 static qboolean kigrax_moves_initialized;
@@ -270,30 +277,91 @@ static void kigrax_sight (edict_t *self, edict_t *other)
 
 /*
 =============
+kigrax_set_attack_hull
+
+Mirror the HLIL salvo helper by toggling between the standing hover hull and
+the reduced crouch box used while firing.
+=============
+*/
+static void kigrax_set_attack_hull (edict_t *self, qboolean crouched)
+{
+	if (crouched)
+	{
+		if (self->monsterinfo.aiflags & AI_DUCKED)
+			return;
+
+		self->monsterinfo.aiflags |= AI_DUCKED;
+		self->mins[2] = KIGRAX_DEFAULT_MIN_Z;
+		self->maxs[2] = KIGRAX_ATTACK_MAX_Z;
+		gi.linkentity (self);
+		return;
+	}
+
+	if (!(self->monsterinfo.aiflags & AI_DUCKED))
+		return;
+
+	self->monsterinfo.aiflags &= ~AI_DUCKED;
+	self->mins[2] = KIGRAX_DEFAULT_MIN_Z;
+	self->maxs[2] = KIGRAX_DEFAULT_MAX_Z;
+	gi.linkentity (self);
+}
+
+/*
+=============
 kigrax_fire
 
-Fire the Kigrax blaster burst from the recovered muzzle offset.
+Fire the Kigrax four-shot salvo from the HLIL muzzle offset while the crouched
+attack hull is active.
 =============
 */
 static void kigrax_fire (edict_t *self)
 {
-	vec3_t start, dir, forward, right, target;
+	vec3_t start, dir, forward, right, target, aim_angles;
+	int i;
 
 	if (!self->enemy)
 		return;
 
+	kigrax_set_attack_hull (self, true);
 	AngleVectors (self->s.angles, forward, right, NULL);
-	G_ProjectSource (self->s.origin, kigrax_flash_offset, forward, right, start);
+	G_ProjectSource (self->s.origin, monster_flash_offset[MZ2_HOVER_BLASTER_1], forward, right, start);
 
 	VectorCopy (self->enemy->s.origin, target);
 	target[2] += self->enemy->viewheight * 0.5f;
 
 	VectorSubtract (target, start, dir);
 	VectorNormalize (dir);
+	vectoangles (dir, aim_angles);
 
 	gi.sound (self, CHAN_WEAPON, sound_attack, 1.0f, ATTN_NORM, 0.0f);
-	monster_fire_blaster (self, start, dir, 8, 1000, MZ2_HOVER_BLASTER_1, EF_BLASTER);
+	for (i = 0; i < ARRAY_LEN(kigrax_salvo_yaw_offsets); i++)
+	{
+		vec3_t shot_angles, shot_dir;
+
+		VectorCopy (aim_angles, shot_angles);
+		shot_angles[YAW] += kigrax_salvo_yaw_offsets[i];
+		shot_angles[PITCH] += kigrax_salvo_pitch_offsets[i];
+		shot_angles[ROLL] = 0.0f;
+		AngleVectors (shot_angles, shot_dir, NULL, NULL);
+
+		monster_fire_blaster (self, start, shot_dir, 8, 1000, MZ2_HOVER_BLASTER_1, EF_BLASTER);
+	}
 }
+
+/*
+=============
+kigrax_attack_cleanup
+
+Restore the standing hover hull once the salvo completes, then return to the
+run selector so the strafing dispatchers regain control.
+=============
+*/
+static void kigrax_attack_cleanup (edict_t *self)
+{
+	kigrax_set_attack_hull (self, false);
+	kigrax_run_select (self);
+}
+
 
 /*
 =============
