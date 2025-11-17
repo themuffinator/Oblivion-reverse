@@ -20,6 +20,116 @@
         "sets": []
       }
     },
+    "func_areaportal": {
+      "defaults": {
+        "offset_0x254": [
+          {
+            "offset": 596,
+            "value": 0
+          }
+        ]
+      },
+      "function": "sub_1000da70",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "func_button": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 3
+          }
+        ],
+        "offset_0x148": [
+          {
+            "offset": 328,
+            "value": 1109393408
+          }
+        ],
+        "offset_0x240": [
+          {
+            "offset": 576,
+            "value": 1
+          }
+        ],
+        "offset_0x290": [
+          {
+            "offset": 656,
+            "value": 1077936128
+          }
+        ],
+        "offset_0x330": [
+          {
+            "offset": 816,
+            "value": 1
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 3
+          }
+        ]
+      },
+      "function": "sub_10008d30",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "func_clock": {
+      "defaults": {
+        "offset_0x254": [
+          {
+            "offset": 596,
+            "value": 3600
+          }
+        ]
+      },
+      "function": "sub_10011160",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "func_conveyor": {
+      "defaults": {
+        "offset_0x148": [
+          {
+            "offset": 328,
+            "value": 1120403456
+          },
+          {
+            "offset": 328,
+            "value": 0
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 3
+          }
+        ]
+      },
+      "function": "sub_1000ab80",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [
+          1
+        ],
+        "clears": [],
+        "sets": []
+      }
+    },
     "func_door": {
       "defaults": {},
       "function": "sub_10006b20",
@@ -40,6 +150,521 @@
         "sets": []
       }
     },
+    "func_door_secret": {
+      "defaults": {
+        "offset_0x10": [
+          {
+            "offset": 16,
+            "value": 0
+          }
+        ],
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 2
+          }
+        ],
+        "offset_0x14": [
+          {
+            "offset": 20,
+            "value": 0
+          }
+        ],
+        "offset_0x18": [
+          {
+            "offset": 24,
+            "value": 0
+          }
+        ],
+        "offset_0x220": [
+          {
+            "offset": 544,
+            "value": 0
+          }
+        ],
+        "offset_0x240": [
+          {
+            "offset": 576,
+            "value": 1
+          },
+          {
+            "offset": 576,
+            "value": 1
+          }
+        ],
+        "offset_0x244": [
+          {
+            "offset": 580,
+            "value": 2
+          }
+        ],
+        "offset_0x290": [
+          {
+            "offset": 656,
+            "value": 1084227584
+          }
+        ],
+        "offset_0x31c": [
+          {
+            "offset": 796,
+            "value": 1112014848
+          }
+        ],
+        "offset_0x320": [
+          {
+            "offset": 800,
+            "value": 1112014848
+          }
+        ],
+        "offset_0x324": [
+          {
+            "offset": 804,
+            "value": 1112014848
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 3
+          }
+        ]
+      },
+      "function": "sub_1000ae30",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [
+          1
+        ],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "func_explosive": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 2
+          }
+        ],
+        "offset_0x220": [
+          {
+            "offset": 544,
+            "value": 100
+          }
+        ],
+        "offset_0x240": [
+          {
+            "offset": 576,
+            "value": 1
+          }
+        ],
+        "offset_0x254": [
+          {
+            "offset": 596,
+            "value": 1
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 3
+          },
+          {
+            "offset": 248,
+            "value": 0
+          }
+        ]
+      },
+      "function": "sub_1000f250",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "func_group": {
+      "defaults": {},
+      "function": "sub_1000fd20",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "func_killbox": {
+      "defaults": {
+        "offset_0xb8": [
+          {
+            "offset": 184,
+            "value": 1
+          }
+        ]
+      },
+      "function": "sub_1000b0b0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "func_object": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 2
+          },
+          {
+            "offset": 260,
+            "value": 2
+          }
+        ],
+        "offset_0x244": [
+          {
+            "offset": 580,
+            "value": 100
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 0
+          },
+          {
+            "offset": 248,
+            "value": 3
+          }
+        ],
+        "offset_0xfc": [
+          {
+            "offset": 252,
+            "value": 33685507
+          }
+        ]
+      },
+      "function": "sub_1000ede0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "func_plat": {
+      "defaults": {
+        "offset_0x10": [
+          {
+            "offset": 16,
+            "value": 0
+          }
+        ],
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 2
+          }
+        ],
+        "offset_0x14": [
+          {
+            "offset": 20,
+            "value": 0
+          }
+        ],
+        "offset_0x148": [
+          {
+            "offset": 328,
+            "value": 1101004800
+          }
+        ],
+        "offset_0x14c": [
+          {
+            "offset": 332,
+            "value": 1084227584
+          }
+        ],
+        "offset_0x150": [
+          {
+            "offset": 336,
+            "value": 1084227584
+          }
+        ],
+        "offset_0x18": [
+          {
+            "offset": 24,
+            "value": 0
+          }
+        ],
+        "offset_0x244": [
+          {
+            "offset": 580,
+            "value": 2
+          }
+        ],
+        "offset_0x330": [
+          {
+            "offset": 816,
+            "value": 1
+          },
+          {
+            "offset": 816,
+            "value": 2
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 3
+          }
+        ]
+      },
+      "function": "sub_100074f0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "func_rotate_train": {
+      "defaults": {
+        "offset_0x10": [
+          {
+            "offset": 16,
+            "value": 0
+          }
+        ],
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 2
+          }
+        ],
+        "offset_0x14": [
+          {
+            "offset": 20,
+            "value": 0
+          }
+        ],
+        "offset_0x148": [
+          {
+            "offset": 328,
+            "value": 1120403456
+          }
+        ],
+        "offset_0x18": [
+          {
+            "offset": 24,
+            "value": 0
+          }
+        ],
+        "offset_0x1f4": [
+          {
+            "offset": 500,
+            "value": 268522848
+          }
+        ],
+        "offset_0x1f8": [
+          {
+            "offset": 504,
+            "value": 268521616
+          }
+        ],
+        "offset_0x200": [
+          {
+            "offset": 512,
+            "value": 268523248
+          }
+        ],
+        "offset_0x244": [
+          {
+            "offset": 580,
+            "value": 0
+          },
+          {
+            "offset": 580,
+            "value": 100
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 3
+          }
+        ]
+      },
+      "function": "sub_10015750",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [
+          4
+        ],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "func_rotating": {
+      "defaults": {},
+      "function": "sub_100086a0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "func_timer": {
+      "defaults": {
+        "offset_0x290": [
+          {
+            "offset": 656,
+            "value": 1065353216
+          }
+        ],
+        "offset_0xb8": [
+          {
+            "offset": 184,
+            "value": 1
+          }
+        ]
+      },
+      "function": "sub_1000aa60",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [
+          1
+        ],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "func_train": {
+      "defaults": {
+        "offset_0x10": [
+          {
+            "offset": 16,
+            "value": 0
+          }
+        ],
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 2
+          }
+        ],
+        "offset_0x14": [
+          {
+            "offset": 20,
+            "value": 0
+          }
+        ],
+        "offset_0x148": [
+          {
+            "offset": 328,
+            "value": 1120403456
+          }
+        ],
+        "offset_0x18": [
+          {
+            "offset": 24,
+            "value": 0
+          }
+        ],
+        "offset_0x190": [
+          {
+            "offset": 400,
+            "value": 75
+          }
+        ],
+        "offset_0x220": [
+          {
+            "offset": 544,
+            "value": 100
+          }
+        ],
+        "offset_0x240": [
+          {
+            "offset": 576,
+            "value": 1
+          }
+        ],
+        "offset_0x244": [
+          {
+            "offset": 580,
+            "value": 0
+          },
+          {
+            "offset": 580,
+            "value": 20
+          }
+        ],
+        "offset_0x254": [
+          {
+            "offset": 596,
+            "value": 10
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 3
+          }
+        ]
+      },
+      "function": "sub_1000a680",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [
+          8
+        ],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "func_wall": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 2
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 3
+          },
+          {
+            "offset": 248,
+            "value": 3
+          },
+          {
+            "offset": 248,
+            "value": 0
+          }
+        ]
+      },
+      "function": "sub_1000ec40",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "func_water": {
+      "defaults": {},
+      "function": "sub_10009fa0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
     "grenade": {
       "defaults": {
         "offset_0x58": [
@@ -50,6 +675,151 @@
         ]
       },
       "function": "sub_1001b400",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "info_notnull": {
+      "defaults": {},
+      "function": "sub_1000eaa0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "info_null": {
+      "defaults": {},
+      "function": "sub_1000fd20",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "info_player_coop": {
+      "defaults": {},
+      "function": "sub_1002f630",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "info_player_deathmatch": {
+      "defaults": {},
+      "function": "sub_1002f600",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "info_player_intermission": {
+      "defaults": {},
+      "function": "sub_10002c90",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "info_player_start": {
+      "defaults": {},
+      "function": "sub_1002f4f0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "info_teleport_dest": {
+      "defaults": {
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 0
+          }
+        ]
+      },
+      "function": "sub_10011510",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "item_health": {
+      "defaults": {
+        "offset_0x254": [
+          {
+            "offset": 596,
+            "value": 10
+          }
+        ]
+      },
+      "function": "sub_1000d160",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "item_health_large": {
+      "defaults": {
+        "offset_0x254": [
+          {
+            "offset": 596,
+            "value": 25
+          }
+        ]
+      },
+      "function": "sub_1000d250",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "item_health_mega": {
+      "defaults": {
+        "offset_0x254": [
+          {
+            "offset": 596,
+            "value": 100
+          }
+        ]
+      },
+      "function": "sub_1000d2c0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "item_health_small": {
+      "defaults": {
+        "offset_0x254": [
+          {
+            "offset": 596,
+            "value": 2
+          }
+        ]
+      },
+      "function": "sub_1000d1d0",
       "spawnflags": {
         "assignments": [],
         "checks": [],
@@ -75,15 +845,54 @@
       }
     },
     "light": {
+      "defaults": {},
+      "function": "sub_1000eae0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "light_mine1": {
       "defaults": {
-        "offset_0x58": [
+        "offset_0x104": [
           {
-            "offset": 88,
+            "offset": 260,
             "value": 0
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 2
           }
         ]
       },
-      "function": "sub_1001b400",
+      "function": "sub_100109d0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "light_mine2": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 0
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 2
+          }
+        ]
+      },
+      "function": "sub_10010a10",
       "spawnflags": {
         "assignments": [],
         "checks": [],
@@ -102,8 +911,1229 @@
       }
     },
     "misc_actor": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 5
+          }
+        ],
+        "offset_0x190": [
+          {
+            "offset": 400,
+            "value": 200
+          }
+        ],
+        "offset_0x1ec": [
+          {
+            "offset": 492,
+            "value": 0
+          }
+        ],
+        "offset_0x220": [
+          {
+            "offset": 544,
+            "value": 100
+          },
+          {
+            "offset": 544,
+            "value": 4294967295
+          }
+        ],
+        "offset_0x22c": [
+          {
+            "offset": 556,
+            "value": 2
+          }
+        ],
+        "offset_0x28": [
+          {
+            "offset": 40,
+            "value": 255
+          }
+        ],
+        "offset_0x2c": [
+          {
+            "offset": 44,
+            "value": 255
+          }
+        ],
+        "offset_0x358": [
+          {
+            "offset": 856,
+            "value": 268747608
+          }
+        ],
+        "offset_0x364": [
+          {
+            "offset": 868,
+            "value": 1065353216
+          }
+        ],
+        "offset_0x38": [
+          {
+            "offset": 56,
+            "value": 183
+          },
+          {
+            "offset": 56,
+            "value": 189
+          },
+          {
+            "offset": 56,
+            "value": 197
+          }
+        ],
+        "offset_0x384": [
+          {
+            "offset": 900,
+            "value": 0
+          }
+        ],
+        "offset_0x388": [
+          {
+            "offset": 904,
+            "value": 0
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 2
+          }
+        ]
+      },
+      "function": "sub_1001f460",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "misc_banner": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 0
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 0
+          }
+        ]
+      },
+      "function": "sub_10010200",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "misc_bigviper": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 0
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 2
+          }
+        ]
+      },
+      "function": "sub_100104f0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "misc_blackhole": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 0
+          }
+        ],
+        "offset_0x44": [
+          {
+            "offset": 68,
+            "value": 32
+          }
+        ],
+        "offset_0xbc": [
+          {
+            "offset": 188,
+            "value": 3263168512
+          }
+        ],
+        "offset_0xc0": [
+          {
+            "offset": 192,
+            "value": 3263168512
+          }
+        ],
+        "offset_0xc4": [
+          {
+            "offset": 196,
+            "value": 0
+          }
+        ],
+        "offset_0xc8": [
+          {
+            "offset": 200,
+            "value": 1115684864
+          }
+        ],
+        "offset_0xcc": [
+          {
+            "offset": 204,
+            "value": 1115684864
+          }
+        ],
+        "offset_0xd0": [
+          {
+            "offset": 208,
+            "value": 1090519040
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 0
+          }
+        ]
+      },
+      "function": "sub_1000fd60",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "misc_camera": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 8
+          }
+        ],
+        "offset_0x290": [
+          {
+            "offset": 656,
+            "value": 1077936128
+          }
+        ],
+        "offset_0xb8": [
+          {
+            "offset": 184,
+            "value": 1
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 0
+          }
+        ]
+      },
+      "function": "sub_100035f0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "misc_camera_target": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 8
+          }
+        ],
+        "offset_0x1e0": [
+          {
+            "offset": 480,
+            "value": 0
+          }
+        ],
+        "offset_0x254": [
+          {
+            "offset": 596,
+            "value": 0
+          }
+        ],
+        "offset_0xb8": [
+          {
+            "offset": 184,
+            "value": 1
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 0
+          }
+        ]
+      },
+      "function": "sub_10003880",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "misc_deadsoldier": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 0
+          }
+        ],
+        "offset_0x22c": [
+          {
+            "offset": 556,
+            "value": 2
+          }
+        ],
+        "offset_0x240": [
+          {
+            "offset": 576,
+            "value": 1
+          }
+        ],
+        "offset_0x38": [
+          {
+            "offset": 56,
+            "value": 1
+          },
+          {
+            "offset": 56,
+            "value": 2
+          },
+          {
+            "offset": 56,
+            "value": 3
+          },
+          {
+            "offset": 56,
+            "value": 4
+          },
+          {
+            "offset": 56,
+            "value": 0
+          },
+          {
+            "offset": 56,
+            "value": 5
+          }
+        ],
+        "offset_0xbc": [
+          {
+            "offset": 188,
+            "value": 3246391296
+          }
+        ],
+        "offset_0xc0": [
+          {
+            "offset": 192,
+            "value": 3246391296
+          }
+        ],
+        "offset_0xc4": [
+          {
+            "offset": 196,
+            "value": 0
+          }
+        ],
+        "offset_0xc8": [
+          {
+            "offset": 200,
+            "value": 1098907648
+          }
+        ],
+        "offset_0xcc": [
+          {
+            "offset": 204,
+            "value": 1098907648
+          }
+        ],
+        "offset_0xd0": [
+          {
+            "offset": 208,
+            "value": 1098907648
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 2
+          }
+        ]
+      },
+      "function": "sub_100102d0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "misc_easterchick": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 0
+          }
+        ],
+        "offset_0x38": [
+          {
+            "offset": 56,
+            "value": 208
+          }
+        ],
+        "offset_0xbc": [
+          {
+            "offset": 188,
+            "value": 3254779904
+          }
+        ],
+        "offset_0xc0": [
+          {
+            "offset": 192,
+            "value": 3254779904
+          }
+        ],
+        "offset_0xc4": [
+          {
+            "offset": 196,
+            "value": 0
+          }
+        ],
+        "offset_0xc8": [
+          {
+            "offset": 200,
+            "value": 1107296256
+          }
+        ],
+        "offset_0xcc": [
+          {
+            "offset": 204,
+            "value": 1107296256
+          }
+        ],
+        "offset_0xd0": [
+          {
+            "offset": 208,
+            "value": 1107296256
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 2
+          }
+        ]
+      },
+      "function": "sub_1000fee0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "misc_easterchick2": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 0
+          }
+        ],
+        "offset_0x38": [
+          {
+            "offset": 56,
+            "value": 248
+          }
+        ],
+        "offset_0xbc": [
+          {
+            "offset": 188,
+            "value": 3254779904
+          }
+        ],
+        "offset_0xc0": [
+          {
+            "offset": 192,
+            "value": 3254779904
+          }
+        ],
+        "offset_0xc4": [
+          {
+            "offset": 196,
+            "value": 0
+          }
+        ],
+        "offset_0xc8": [
+          {
+            "offset": 200,
+            "value": 1107296256
+          }
+        ],
+        "offset_0xcc": [
+          {
+            "offset": 204,
+            "value": 1107296256
+          }
+        ],
+        "offset_0xd0": [
+          {
+            "offset": 208,
+            "value": 1107296256
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 2
+          }
+        ]
+      },
+      "function": "sub_1000ffa0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "misc_eastertank": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 0
+          }
+        ],
+        "offset_0x38": [
+          {
+            "offset": 56,
+            "value": 254
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 2
+          }
+        ]
+      },
+      "function": "sub_1000fe20",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "misc_explobox": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 5
+          }
+        ],
+        "offset_0x190": [
+          {
+            "offset": 400,
+            "value": 400
+          }
+        ],
+        "offset_0x220": [
+          {
+            "offset": 544,
+            "value": 10
+          }
+        ],
+        "offset_0x240": [
+          {
+            "offset": 576,
+            "value": 1
+          }
+        ],
+        "offset_0x244": [
+          {
+            "offset": 580,
+            "value": 150
+          }
+        ],
+        "offset_0x35c": [
+          {
+            "offset": 860,
+            "value": 1024
+          }
+        ],
+        "offset_0xbc": [
+          {
+            "offset": 188,
+            "value": 3246391296
+          }
+        ],
+        "offset_0xc0": [
+          {
+            "offset": 192,
+            "value": 3246391296
+          }
+        ],
+        "offset_0xc4": [
+          {
+            "offset": 196,
+            "value": 0
+          }
+        ],
+        "offset_0xc8": [
+          {
+            "offset": 200,
+            "value": 1098907648
+          }
+        ],
+        "offset_0xcc": [
+          {
+            "offset": 204,
+            "value": 1098907648
+          }
+        ],
+        "offset_0xd0": [
+          {
+            "offset": 208,
+            "value": 1109393408
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 2
+          }
+        ]
+      },
+      "function": "sub_1000fbe0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "misc_gib_arm": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 7
+          }
+        ],
+        "offset_0x22c": [
+          {
+            "offset": 556,
+            "value": 2
+          }
+        ],
+        "offset_0x240": [
+          {
+            "offset": 576,
+            "value": 1
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 0
+          }
+        ]
+      },
+      "function": "sub_10010a50",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "misc_gib_head": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 7
+          }
+        ],
+        "offset_0x22c": [
+          {
+            "offset": 556,
+            "value": 2
+          }
+        ],
+        "offset_0x240": [
+          {
+            "offset": 576,
+            "value": 1
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 0
+          }
+        ]
+      },
+      "function": "sub_10010c30",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "misc_gib_leg": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 7
+          }
+        ],
+        "offset_0x22c": [
+          {
+            "offset": 556,
+            "value": 2
+          }
+        ],
+        "offset_0x240": [
+          {
+            "offset": 576,
+            "value": 1
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 0
+          }
+        ]
+      },
+      "function": "sub_10010b40",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "misc_insane": {
       "defaults": {},
-      "function": "sub_10037cd0",
+      "function": "sub_10028ba0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "misc_satellite_dish": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 0
+          }
+        ],
+        "offset_0xbc": [
+          {
+            "offset": 188,
+            "value": 3263168512
+          }
+        ],
+        "offset_0xc0": [
+          {
+            "offset": 192,
+            "value": 3263168512
+          }
+        ],
+        "offset_0xc4": [
+          {
+            "offset": 196,
+            "value": 0
+          }
+        ],
+        "offset_0xc8": [
+          {
+            "offset": 200,
+            "value": 1115684864
+          }
+        ],
+        "offset_0xcc": [
+          {
+            "offset": 204,
+            "value": 1115684864
+          }
+        ],
+        "offset_0xd0": [
+          {
+            "offset": 208,
+            "value": 1124073472
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 2
+          }
+        ]
+      },
+      "function": "sub_10010960",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "misc_screenfader": {
+      "defaults": {
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 0
+          }
+        ]
+      },
+      "function": "sub_100116e0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "misc_strogg_ship": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 2
+          }
+        ],
+        "offset_0x148": [
+          {
+            "offset": 328,
+            "value": 1133903872
+          }
+        ],
+        "offset_0xbc": [
+          {
+            "offset": 188,
+            "value": 3246391296
+          }
+        ],
+        "offset_0xc0": [
+          {
+            "offset": 192,
+            "value": 3246391296
+          }
+        ],
+        "offset_0xc4": [
+          {
+            "offset": 196,
+            "value": 0
+          }
+        ],
+        "offset_0xc8": [
+          {
+            "offset": 200,
+            "value": 1098907648
+          }
+        ],
+        "offset_0xcc": [
+          {
+            "offset": 204,
+            "value": 1098907648
+          }
+        ],
+        "offset_0xd0": [
+          {
+            "offset": 208,
+            "value": 1107296256
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 0
+          }
+        ]
+      },
+      "function": "sub_100107f0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "misc_teleporter": {
+      "defaults": {
+        "offset_0x3c": [
+          {
+            "offset": 60,
+            "value": 1
+          }
+        ],
+        "offset_0x40": [
+          {
+            "offset": 64,
+            "value": 131072
+          }
+        ],
+        "offset_0xbc": [
+          {
+            "offset": 188,
+            "value": 3238002688
+          }
+        ],
+        "offset_0xc0": [
+          {
+            "offset": 192,
+            "value": 3238002688
+          }
+        ],
+        "offset_0xc4": [
+          {
+            "offset": 196,
+            "value": 1090519040
+          }
+        ],
+        "offset_0xc8": [
+          {
+            "offset": 200,
+            "value": 1090519040
+          }
+        ],
+        "offset_0xcc": [
+          {
+            "offset": 204,
+            "value": 1090519040
+          }
+        ],
+        "offset_0xd0": [
+          {
+            "offset": 208,
+            "value": 1103101952
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 2
+          },
+          {
+            "offset": 248,
+            "value": 1
+          }
+        ]
+      },
+      "function": "sub_10011390",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "misc_teleporter_dest": {
+      "defaults": {
+        "offset_0x3c": [
+          {
+            "offset": 60,
+            "value": 0
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 2
+          }
+        ]
+      },
+      "function": "sub_100114a0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "misc_viper": {
+      "defaults": {},
+      "function": "sub_100103f0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "misc_viper_bomb": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 0
+          }
+        ],
+        "offset_0x244": [
+          {
+            "offset": 580,
+            "value": 1000
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 0
+          }
+        ]
+      },
+      "function": "sub_10010710",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "monster_badass": {
+      "defaults": {},
+      "function": "sub_10020430",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "monster_berserk": {
+      "defaults": {},
+      "function": "sub_10020ae0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "monster_boss2": {
+      "defaults": {},
+      "function": "sub_10021690",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "monster_boss3_stand": {
+      "defaults": {},
+      "function": "sub_100218a0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "monster_brain": {
+      "defaults": {},
+      "function": "sub_10023830",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "monster_chick": {
+      "defaults": {},
+      "function": "sub_10024230",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "monster_commander_body": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 0
+          }
+        ],
+        "offset_0x108": [
+          {
+            "offset": 264,
+            "value": 16
+          }
+        ],
+        "offset_0x240": [
+          {
+            "offset": 576,
+            "value": 1
+          }
+        ],
+        "offset_0xbc": [
+          {
+            "offset": 188,
+            "value": 3254779904
+          }
+        ],
+        "offset_0xc0": [
+          {
+            "offset": 192,
+            "value": 3254779904
+          }
+        ],
+        "offset_0xc4": [
+          {
+            "offset": 196,
+            "value": 0
+          }
+        ],
+        "offset_0xc8": [
+          {
+            "offset": 200,
+            "value": 1107296256
+          }
+        ],
+        "offset_0xcc": [
+          {
+            "offset": 204,
+            "value": 1107296256
+          }
+        ],
+        "offset_0xd0": [
+          {
+            "offset": 208,
+            "value": 1111490560
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 2
+          }
+        ]
+      },
+      "function": "sub_10010100",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "monster_cyborg": {
+      "defaults": {},
+      "function": "sub_10025200",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "monster_flipper": {
+      "defaults": {},
+      "function": "sub_100256d0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "monster_floater": {
+      "defaults": {},
+      "function": "sub_10025ce0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "monster_flyer": {
+      "defaults": {},
+      "function": "sub_10026370",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "monster_gladiator": {
+      "defaults": {},
+      "function": "sub_10026a30",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "monster_gunner": {
+      "defaults": {},
+      "function": "sub_100272f0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "monster_hover": {
+      "defaults": {},
+      "function": "sub_10027a20",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "monster_infantry": {
+      "defaults": {},
+      "function": "sub_10028260",
       "spawnflags": {
         "assignments": [],
         "checks": [],
@@ -146,6 +2176,16 @@
         "sets": []
       }
     },
+    "monster_kigrax": {
+      "defaults": {},
+      "function": "sub_10029330",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
     "monster_makron": {
       "defaults": {
         "offset_0x12c": [
@@ -174,6 +2214,323 @@
         ]
       },
       "function": "sub_10001ac0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "monster_medic": {
+      "defaults": {},
+      "function": "sub_10029ed0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "monster_mutant": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 5
+          }
+        ],
+        "offset_0x190": [
+          {
+            "offset": 400,
+            "value": 300
+          }
+        ],
+        "offset_0x220": [
+          {
+            "offset": 544,
+            "value": 300
+          }
+        ],
+        "offset_0x228": [
+          {
+            "offset": 552,
+            "value": 4294967176
+          }
+        ],
+        "offset_0x364": [
+          {
+            "offset": 868,
+            "value": 1065353216
+          }
+        ],
+        "offset_0x37c": [
+          {
+            "offset": 892,
+            "value": 0
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 2
+          }
+        ]
+      },
+      "function": "sub_1002b7c0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "monster_parasite": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 5
+          }
+        ],
+        "offset_0x190": [
+          {
+            "offset": 400,
+            "value": 250
+          }
+        ],
+        "offset_0x220": [
+          {
+            "offset": 544,
+            "value": 175
+          }
+        ],
+        "offset_0x228": [
+          {
+            "offset": 552,
+            "value": 4294967246
+          }
+        ],
+        "offset_0x364": [
+          {
+            "offset": 868,
+            "value": 1065353216
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 2
+          }
+        ]
+      },
+      "function": "sub_1002c060",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "monster_soldier": {
+      "defaults": {
+        "offset_0x220": [
+          {
+            "offset": 544,
+            "value": 30
+          }
+        ],
+        "offset_0x228": [
+          {
+            "offset": 552,
+            "value": 4294967266
+          }
+        ]
+      },
+      "function": "sub_1002d200",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "monster_soldier_deatom": {
+      "defaults": {
+        "offset_0x220": [
+          {
+            "offset": 544,
+            "value": 40
+          }
+        ],
+        "offset_0x228": [
+          {
+            "offset": 552,
+            "value": 4294967266
+          }
+        ]
+      },
+      "function": "sub_1002d300",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "monster_soldier_light": {
+      "defaults": {
+        "offset_0x220": [
+          {
+            "offset": 544,
+            "value": 20
+          }
+        ],
+        "offset_0x228": [
+          {
+            "offset": 552,
+            "value": 4294967266
+          }
+        ],
+        "offset_0x3c": [
+          {
+            "offset": 60,
+            "value": 0
+          }
+        ]
+      },
+      "function": "sub_1002d170",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "monster_soldier_ss": {
+      "defaults": {
+        "offset_0x220": [
+          {
+            "offset": 544,
+            "value": 40
+          }
+        ],
+        "offset_0x228": [
+          {
+            "offset": 552,
+            "value": 4294967266
+          }
+        ]
+      },
+      "function": "sub_1002d280",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "monster_spider": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 5
+          },
+          {
+            "offset": 260,
+            "value": 7
+          }
+        ],
+        "offset_0x190": [
+          {
+            "offset": 400,
+            "value": 400
+          }
+        ],
+        "offset_0x1ec": [
+          {
+            "offset": 492,
+            "value": 0
+          }
+        ],
+        "offset_0x220": [
+          {
+            "offset": 544,
+            "value": 400
+          },
+          {
+            "offset": 544,
+            "value": 4294967295
+          }
+        ],
+        "offset_0x228": [
+          {
+            "offset": 552,
+            "value": 4294967121
+          }
+        ],
+        "offset_0x358": [
+          {
+            "offset": 856,
+            "value": 268814848
+          }
+        ],
+        "offset_0x364": [
+          {
+            "offset": 868,
+            "value": 1065353216
+          }
+        ],
+        "offset_0x37c": [
+          {
+            "offset": 892,
+            "value": 0
+          }
+        ],
+        "offset_0xbc": [
+          {
+            "offset": 188,
+            "value": 3254779904
+          }
+        ],
+        "offset_0xc0": [
+          {
+            "offset": 192,
+            "value": 3254779904
+          }
+        ],
+        "offset_0xc4": [
+          {
+            "offset": 196,
+            "value": 3253731328
+          }
+        ],
+        "offset_0xc8": [
+          {
+            "offset": 200,
+            "value": 1107296256
+          }
+        ],
+        "offset_0xcc": [
+          {
+            "offset": 204,
+            "value": 1107296256
+          }
+        ],
+        "offset_0xd0": [
+          {
+            "offset": 208,
+            "value": 0
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 2
+          }
+        ]
+      },
+      "function": "sub_1002dcf0",
       "spawnflags": {
         "assignments": [],
         "checks": [],
@@ -244,6 +2601,895 @@
         ]
       },
       "function": "sub_10001ac0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "monster_tank_commander": {
+      "defaults": {},
+      "function": "sub_1002f190",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "path_corner": {
+      "defaults": {},
+      "function": "sub_1000e670",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "point_combat": {
+      "defaults": {
+        "offset_0xb8": [
+          {
+            "offset": 184,
+            "value": 1
+          }
+        ],
+        "offset_0xbc": [
+          {
+            "offset": 188,
+            "value": 3238002688
+          }
+        ],
+        "offset_0xc0": [
+          {
+            "offset": 192,
+            "value": 3238002688
+          }
+        ],
+        "offset_0xc4": [
+          {
+            "offset": 196,
+            "value": 3246391296
+          }
+        ],
+        "offset_0xc8": [
+          {
+            "offset": 200,
+            "value": 1090519040
+          }
+        ],
+        "offset_0xcc": [
+          {
+            "offset": 204,
+            "value": 1090519040
+          }
+        ],
+        "offset_0xd0": [
+          {
+            "offset": 208,
+            "value": 1098907648
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 1
+          }
+        ]
+      },
+      "function": "sub_1000e940",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "target_actor": {
+      "defaults": {
+        "offset_0x14": [
+          {
+            "offset": 20,
+            "value": 1135869952
+          }
+        ],
+        "offset_0x148": [
+          {
+            "offset": 328,
+            "value": 1128792064
+          }
+        ],
+        "offset_0xb8": [
+          {
+            "offset": 184,
+            "value": 1
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 1
+          }
+        ]
+      },
+      "function": "sub_1001f930",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "target_blaster": {
+      "defaults": {
+        "offset_0x148": [
+          {
+            "offset": 328,
+            "value": 1148846080
+          }
+        ],
+        "offset_0x244": [
+          {
+            "offset": 580,
+            "value": 15
+          }
+        ],
+        "offset_0xb8": [
+          {
+            "offset": 184,
+            "value": 1
+          }
+        ]
+      },
+      "function": "sub_10018230",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "target_changelevel": {
+      "defaults": {},
+      "function": "sub_10017f80",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "target_character": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 2
+          }
+        ],
+        "offset_0x38": [
+          {
+            "offset": 56,
+            "value": 12
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 3
+          }
+        ]
+      },
+      "function": "sub_10010d20",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "target_crosslevel_target": {
+      "defaults": {
+        "offset_0x294": [
+          {
+            "offset": 660,
+            "value": 1065353216
+          }
+        ],
+        "offset_0xb8": [
+          {
+            "offset": 184,
+            "value": 1
+          }
+        ]
+      },
+      "function": "sub_100184f0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "target_crosslevel_trigger": {
+      "defaults": {
+        "offset_0xb8": [
+          {
+            "offset": 184,
+            "value": 1
+          }
+        ]
+      },
+      "function": "sub_10018490",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "target_earthquake": {
+      "defaults": {
+        "offset_0x148": [
+          {
+            "offset": 328,
+            "value": 1128792064
+          }
+        ],
+        "offset_0x254": [
+          {
+            "offset": 596,
+            "value": 5
+          }
+        ]
+      },
+      "function": "sub_10018ea0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "target_explosion": {
+      "defaults": {
+        "offset_0xb8": [
+          {
+            "offset": 184,
+            "value": 1
+          }
+        ]
+      },
+      "function": "sub_10017e30",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "target_goal": {
+      "defaults": {
+        "offset_0xb8": [
+          {
+            "offset": 184,
+            "value": 1
+          }
+        ]
+      },
+      "function": "sub_10017cd0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "target_help": {
+      "defaults": {},
+      "function": "sub_10017b00",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "target_laser": {
+      "defaults": {},
+      "function": "sub_100189b0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "target_lightramp": {
+      "defaults": {},
+      "function": "sub_10018bd0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "target_railgun": {
+      "defaults": {
+        "offset_0x244": [
+          {
+            "offset": 580,
+            "value": 150
+          }
+        ],
+        "offset_0xb8": [
+          {
+            "offset": 184,
+            "value": 1
+          }
+        ]
+      },
+      "function": "sub_100182e0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "target_rocket": {
+      "defaults": {
+        "offset_0x244": [
+          {
+            "offset": 580,
+            "value": 100
+          }
+        ]
+      },
+      "function": "sub_100183a0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "target_secret": {
+      "defaults": {
+        "offset_0xb8": [
+          {
+            "offset": 184,
+            "value": 1
+          }
+        ]
+      },
+      "function": "sub_10017bc0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "target_spawner": {
+      "defaults": {
+        "offset_0xb8": [
+          {
+            "offset": 184,
+            "value": 1
+          }
+        ]
+      },
+      "function": "sub_10018180",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "target_speaker": {
+      "defaults": {},
+      "function": "sub_100179a0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "target_splash": {
+      "defaults": {
+        "offset_0x254": [
+          {
+            "offset": 596,
+            "value": 32
+          }
+        ],
+        "offset_0xb8": [
+          {
+            "offset": 184,
+            "value": 1
+          }
+        ]
+      },
+      "function": "sub_10018090",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "target_string": {
+      "defaults": {},
+      "function": "sub_10010de0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "target_temp_entity": {
+      "defaults": {},
+      "function": "sub_10017930",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "trigger_always": {
+      "defaults": {
+        "offset_0x294": [
+          {
+            "offset": 660,
+            "value": 1045220557
+          }
+        ]
+      },
+      "function": "sub_100196d0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "trigger_counter": {
+      "defaults": {
+        "offset_0x254": [
+          {
+            "offset": 596,
+            "value": 2
+          }
+        ],
+        "offset_0x290": [
+          {
+            "offset": 656,
+            "value": 3212836864
+          }
+        ]
+      },
+      "function": "sub_100196a0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "trigger_elevator": {
+      "defaults": {},
+      "function": "sub_1000a970",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "trigger_gravity": {
+      "defaults": {},
+      "function": "sub_10019a60",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "trigger_hurt": {
+      "defaults": {
+        "offset_0x244": [
+          {
+            "offset": 580,
+            "value": 5
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 1
+          },
+          {
+            "offset": 248,
+            "value": 0
+          }
+        ]
+      },
+      "function": "sub_100199c0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "trigger_key": {
+      "defaults": {},
+      "function": "sub_10019530",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "trigger_misc_camera": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 0
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 1
+          },
+          {
+            "offset": 248,
+            "value": 0
+          }
+        ]
+      },
+      "function": "sub_10003ba0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [
+          4
+        ],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "trigger_monsterjump": {
+      "defaults": {
+        "offset_0x14": [
+          {
+            "offset": 20,
+            "value": 1135869952
+          }
+        ],
+        "offset_0x148": [
+          {
+            "offset": 328,
+            "value": 1128792064
+          }
+        ]
+      },
+      "function": "sub_10019b30",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "trigger_multiple": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 0
+          }
+        ],
+        "offset_0x290": [
+          {
+            "offset": 656,
+            "value": 1045220557
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 1
+          },
+          {
+            "offset": 248,
+            "value": 0
+          }
+        ]
+      },
+      "function": "sub_10019120",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [
+          4
+        ],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "trigger_once": {
+      "defaults": {
+        "offset_0x290": [
+          {
+            "offset": 656,
+            "value": 3212836864
+          }
+        ]
+      },
+      "function": "sub_10019210",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [
+          1
+        ],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "trigger_push": {
+      "defaults": {
+        "offset_0x148": [
+          {
+            "offset": 328,
+            "value": 1148846080
+          }
+        ]
+      },
+      "function": "sub_10019850",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "trigger_relay": {
+      "defaults": {},
+      "function": "sub_100192b0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "trigger_teleport": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 0
+          }
+        ],
+        "offset_0x1fc": [
+          {
+            "offset": 508,
+            "value": 0
+          },
+          {
+            "offset": 508,
+            "value": 0
+          }
+        ],
+        "offset_0x290": [
+          {
+            "offset": 656,
+            "value": 1045220557
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 1
+          }
+        ]
+      },
+      "function": "sub_10019db0",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [
+          2,
+          16
+        ],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "turret_base": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 2
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 3
+          }
+        ]
+      },
+      "function": "sub_1001a670",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "turret_breach": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 2
+          }
+        ],
+        "offset_0x148": [
+          {
+            "offset": 328,
+            "value": 1112014848
+          }
+        ],
+        "offset_0x244": [
+          {
+            "offset": 580,
+            "value": 10
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 3
+          }
+        ]
+      },
+      "function": "sub_1001a540",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "turret_driver": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 2
+          }
+        ],
+        "offset_0x190": [
+          {
+            "offset": 400,
+            "value": 200
+          }
+        ],
+        "offset_0x220": [
+          {
+            "offset": 544,
+            "value": 100
+          }
+        ],
+        "offset_0x228": [
+          {
+            "offset": 552,
+            "value": 0
+          }
+        ],
+        "offset_0x23c": [
+          {
+            "offset": 572,
+            "value": 24
+          }
+        ],
+        "offset_0x240": [
+          {
+            "offset": 576,
+            "value": 2
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 2
+          }
+        ],
+        "offset_0xfc": [
+          {
+            "offset": 252,
+            "value": 33685507
+          }
+        ]
+      },
+      "function": "sub_1001aa00",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "viewthing": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 0
+          }
+        ],
+        "offset_0x44": [
+          {
+            "offset": 68,
+            "value": 64
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 2
+          }
+        ]
+      },
+      "function": "sub_1000ea00",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
+    "worldspawn": {
+      "defaults": {
+        "offset_0x104": [
+          {
+            "offset": 260,
+            "value": 2
+          }
+        ],
+        "offset_0x28": [
+          {
+            "offset": 40,
+            "value": 1
+          }
+        ],
+        "offset_0x58": [
+          {
+            "offset": 88,
+            "value": 1
+          }
+        ],
+        "offset_0xf8": [
+          {
+            "offset": 248,
+            "value": 3
+          }
+        ]
+      },
+      "function": "sub_10016ef0",
       "spawnflags": {
         "assignments": [],
         "checks": [],
@@ -778,9 +4024,7 @@
       }
     },
     "item_health": {
-      "defaults": {
-        "count": 10.0
-      },
+      "defaults": {},
       "function": "SP_item_health",
       "spawnflags": {
         "assignments": [],

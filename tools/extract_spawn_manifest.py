@@ -74,6 +74,15 @@ class SourceFile:
     is_split: bool
 
 
+@dataclass
+class BinarySection:
+    name: str
+    virtual_address: int
+    virtual_size: int
+    raw_address: int
+    raw_size: int
+
+
 # ----------------------------- HLIL parsing -----------------------------
 
 class HLILParser:
@@ -92,8 +101,22 @@ class HLILParser:
         self._fields: Optional[Dict[int, FieldInfo]] = None
         self._spawn_map: Optional[Dict[str, str]] = None
         self._string_literals: Optional[Dict[str, str]] = None
+        self._binary_path = self._resolve_binary_path()
+        self._binary_data: Optional[bytes] = None
+        self._binary_sections: Optional[List[BinarySection]] = None
+        self._image_base: Optional[int] = None
+        self._spawn_table_cache: Dict[int, Dict[str, str]] = {}
 
     # -- general helpers --
+    def _resolve_binary_path(self) -> Optional[Path]:
+        name = self.path.name
+        suffix = "_hlil.txt"
+        binary_name = name[:-len(suffix)] if name.endswith(suffix) else name
+        candidate = self.path.with_name(binary_name)
+        if candidate.exists():
+            return candidate
+        return None
+
     def _iter_source_paths(self) -> Iterable[Path]:
         yield self.path
         if self._split_root.is_dir():
@@ -250,6 +273,122 @@ class HLILParser:
     def _normalize_classname(self, classname: str) -> str:
         return classname.strip().strip("\0")
 
+    def _load_binary_image(self) -> bool:
+        if self._binary_path is None:
+            return False
+        if self._binary_data is not None and self._binary_sections is not None:
+            return True
+        data = self._binary_path.read_bytes()
+        if len(data) < 0x100 or data[:2] != b"MZ":
+            return False
+        e_lfanew = struct.unpack_from("<I", data, 0x3C)[0]
+        if e_lfanew + 6 >= len(data) or data[e_lfanew : e_lfanew + 4] != b"PE\0\0":
+            return False
+        number_of_sections = struct.unpack_from("<H", data, e_lfanew + 6)[0]
+        optional_header_size = struct.unpack_from("<H", data, e_lfanew + 20)[0]
+        optional_header_offset = e_lfanew + 24
+        if optional_header_offset + optional_header_size > len(data):
+            return False
+        image_base = struct.unpack_from("<I", data, optional_header_offset + 28)[0]
+        section_offset = optional_header_offset + optional_header_size
+        sections: List[BinarySection] = []
+        for idx in range(number_of_sections):
+            entry_offset = section_offset + idx * 40
+            if entry_offset + 40 > len(data):
+                break
+            name_bytes = data[entry_offset : entry_offset + 8]
+            name = name_bytes.split(b"\0", 1)[0].decode("ascii", errors="ignore")
+            virtual_size = struct.unpack_from("<I", data, entry_offset + 8)[0]
+            virtual_address = struct.unpack_from("<I", data, entry_offset + 12)[0]
+            raw_size = struct.unpack_from("<I", data, entry_offset + 16)[0]
+            raw_address = struct.unpack_from("<I", data, entry_offset + 20)[0]
+            sections.append(
+                BinarySection(
+                    name=name,
+                    virtual_address=virtual_address,
+                    virtual_size=virtual_size,
+                    raw_address=raw_address,
+                    raw_size=raw_size,
+                )
+            )
+        if not sections:
+            return False
+        self._binary_data = data
+        self._binary_sections = sections
+        self._image_base = image_base
+        return True
+
+    def _va_to_file_offset(self, address: int) -> Optional[int]:
+        if not self._load_binary_image() or self._binary_data is None:
+            return None
+        assert self._binary_sections is not None
+        assert self._image_base is not None
+        rva = address - self._image_base
+        for section in self._binary_sections:
+            max_size = section.virtual_size or section.raw_size
+            if max_size == 0:
+                continue
+            start = section.virtual_address
+            end = start + max_size
+            if start <= rva < end:
+                delta = rva - start
+                if delta >= section.raw_size:
+                    return None
+                return section.raw_address + delta
+        return None
+
+    def _read_c_string(self, address: int) -> Optional[str]:
+        if not self._load_binary_image() or self._binary_data is None:
+            return None
+        offset = self._va_to_file_offset(address)
+        if offset is None or offset >= len(self._binary_data):
+            return None
+        data = self._binary_data
+        end = data.find(b"\0", offset)
+        if end == -1:
+            return None
+        try:
+            return data[offset:end].decode("ascii")
+        except UnicodeDecodeError:
+            return None
+
+    def _is_valid_function_address(self, address: int) -> bool:
+        if not self._load_binary_image() or self._binary_sections is None:
+            return False
+        assert self._image_base is not None
+        for section in self._binary_sections:
+            if section.name.strip().lower() != ".text":
+                continue
+            start = self._image_base + section.virtual_address
+            end = start + (section.virtual_size or section.raw_size)
+            if start <= address < end:
+                return True
+        return False
+
+    def _parse_spawn_table_from_address(self, address: int) -> Dict[str, str]:
+        if address in self._spawn_table_cache:
+            return self._spawn_table_cache[address]
+        entries: Dict[str, str] = {}
+        if not self._load_binary_image() or self._binary_data is None:
+            return entries
+        offset = self._va_to_file_offset(address)
+        if offset is None:
+            return entries
+        data = self._binary_data
+        while offset + 8 <= len(data):
+            name_ptr, func_ptr = struct.unpack_from("<II", data, offset)
+            if name_ptr == 0 or func_ptr == 0:
+                break
+            classname = self._read_c_string(name_ptr)
+            if not classname or not self._is_valid_function_address(func_ptr):
+                break
+            normalized = self._normalize_classname(classname)
+            if normalized not in entries:
+                entries[normalized] = f"sub_{func_ptr:08x}"
+            offset += 8
+        self._spawn_table_cache[address] = entries
+        return entries
+
     def _extract_spawn_map_from_spawn_tables(
         self,
         block: List[str],
@@ -275,6 +414,12 @@ class HLILParser:
             normalized = self._normalize_classname(classname)
             if normalized not in results:
                 results[normalized] = func
+
+        if "spawn function" in block_text.lower() and "data_1004a5c0" in block_text.lower():
+            table_entries = self._parse_spawn_table_from_address(0x1004A5C0)
+            for classname, func in table_entries.items():
+                if classname not in results:
+                    results[classname] = func
 
         if not any("switch (" in line for line in block):
             return results
