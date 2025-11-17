@@ -87,6 +87,7 @@ Manual regression passes compare the reconstructed C sources against the Binary 
 ### Current source implementation (`src/game/m_kigrax.c`)
 - `kigrax_init_moves` recreates the HLIL frame ranges and AI helpers while the stand/search/run selectors randomise between the hover, patrol, and dash loops to keep the sentry moving.【F:src/game/m_kigrax.c†L14-L220】
 - The attack entry (frames 139–149) now feeds a 19-frame burst that fires on frame 163 before handing back to the strafing selectors, matching the HLIL cadence.【F:src/game/m_kigrax.c†L229-L307】
+- The death cleanup mirrors the hover corpse routine by swapping to MOVETYPE_TOSS, shrinking the hull, and running the delayed explosion thinker backed by a regression test that enforces the toss/explosion contract.【F:src/game/m_kigrax.c†L330-L376】【F:tests/test_kigrax_regression.py†L1-L58】
 
 ### Remaining deviations
 - `0x1002f030` also shrinks the hull and spawns four bolts; the reconstruction currently fires a single shot and immediately returns to the strafing dispatcher, so bounding-box toggles and the full salvo remain unimplemented.【F:docs/kigrax_hlil_notes.md†L20-L20】【F:src/game/m_kigrax.c†L260-L307】

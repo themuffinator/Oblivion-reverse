@@ -50,6 +50,7 @@ static void kigrax_walk_select (edict_t *self);
 static void kigrax_run_select (edict_t *self);
 static void kigrax_attack_execute (edict_t *self);
 static void kigrax_fire (edict_t *self);
+static void kigrax_deadthink (edict_t *self);
 
 static mframe_t kigrax_frames_hover[KIGRAX_FRAME_IDLE_END - KIGRAX_FRAME_IDLE_START + 1];
 static mframe_t kigrax_frames_scan[KIGRAX_FRAME_SCAN_END - KIGRAX_FRAME_SCAN_START + 1];
@@ -336,13 +337,41 @@ treturn;
 
 /*
 =============
+kigrax_deadthink
+
+Wait for the corpse to land, then trigger the hover-style explosion cleanup.
+=============
+*/
+static void kigrax_deadthink (edict_t *self)
+{
+	if (!self->groundentity && level.time < self->timestamp)
+{
+		self->nextthink = level.time + FRAMETIME;
+		return;
+}
+
+	BecomeExplosion1 (self);
+}
+
+/*
+=============
 kigrax_dead
+
+Mirror the hover corpse routine by swapping to a toss hull and scheduling the
+timed explosion thinker recovered from the HLIL dump.
 =============
 */
 static void kigrax_dead (edict_t *self)
 {
+	VectorSet (self->mins, -16.0f, -16.0f, -24.0f);
+	VectorSet (self->maxs, 16.0f, 16.0f, -8.0f);
+	self->movetype = MOVETYPE_TOSS;
+	self->think = kigrax_deadthink;
+	self->nextthink = level.time + FRAMETIME;
+	self->timestamp = level.time + 15.0f;
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
+	gi.linkentity (self);
 }
 
 /*
