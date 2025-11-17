@@ -1382,104 +1382,192 @@ void fire_laser_cannon (edict_t *self, vec3_t start, vec3_t dir, int damage, int
 
 static void detpack_detonate (edict_t *self);
 
+/*
+=============
+detpack_die
+
+Explode the detpack when it is destroyed by external damage.
+=============
+*/
 static void detpack_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
 {
-    detpack_detonate (self);
+	detpack_detonate (self);
 }
 
+/*
+=============
+detpack_arm
+
+Clear the detpack's temporary flight handlers once it has landed and armed.
+=============
+*/
 static void detpack_arm (edict_t *self)
 {
-    self->think = NULL;
-    self->nextthink = 0;
-    self->touch = NULL;
+	self->think = NULL;
+	self->nextthink = 0;
+	self->touch = NULL;
 }
 
+/*
+=============
+detpack_detonate
+
+Create the explosion effect and apply the configured splash damage.
+=============
+*/
 static void detpack_detonate (edict_t *self)
 {
-    gi.WriteByte (svc_temp_entity);
-    gi.WriteByte (TE_EXPLOSION2);
-    gi.WritePosition (self->s.origin);
-    gi.multicast (self->s.origin, MULTICAST_PHS);
+	gi.WriteByte (svc_temp_entity);
+	gi.WriteByte (TE_EXPLOSION2);
+	gi.WritePosition (self->s.origin);
+	gi.multicast (self->s.origin, MULTICAST_PHS);
 
-    T_RadiusDamage (self, self->owner ? self->owner : self, self->radius_dmg, NULL, self->dmg_radius, MOD_DETPACK);
+	T_RadiusDamage (self, self->owner ? self->owner : self, self->radius_dmg, NULL, self->dmg_radius, MOD_DETPACK);
 
-    G_FreeEdict (self);
+	G_FreeEdict (self);
 }
 
+/*
+=============
+detpack_touch
+
+Handle the detpack coming to rest on world geometry.
+=============
+*/
 static void detpack_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
 {
-    if (other == self->owner)
-        return;
+	if (other == self->owner)
+		return;
 
-    if (surf && (surf->flags & SURF_SKY))
-    {
-        G_FreeEdict (self);
-        return;
-    }
+	if (surf && (surf->flags & SURF_SKY))
+	{
+		G_FreeEdict (self);
+		return;
+	}
 
-    if (!self->groundentity)
-    {
-        VectorClear (self->velocity);
-        VectorClear (self->avelocity);
-        self->movetype = MOVETYPE_NONE;
-        self->touch = NULL;
-        self->think = detpack_arm;
-        self->nextthink = level.time + 0.2f;
-        self->groundentity = other;
-    }
+	if (!self->groundentity)
+	{
+		VectorClear (self->velocity);
+		VectorClear (self->avelocity);
+		self->movetype = MOVETYPE_NONE;
+		self->touch = NULL;
+		self->think = detpack_arm;
+		self->nextthink = level.time + 0.2f;
+		self->groundentity = other;
+	}
 }
 
+#define MAX_ACTIVE_DETPACKS 5
+
+/*
+=============
+detpack_enforce_limit
+
+Ensure a single owner cannot exceed the detpack count that the HLIL logic enforces.
+=============
+*/
+static void detpack_enforce_limit (edict_t *charge)
+{
+	edict_t	*ent;
+	edict_t	*oldest;
+	int		count;
+	int		i;
+
+	if (!charge || !charge->owner)
+		return;
+
+	oldest = charge;
+	count = 0;
+
+	for (i = 1; i < globals.num_edicts; i++)
+	{
+		ent = &g_edicts[i];
+		if (!ent->inuse)
+			continue;
+		if (!ent->classname)
+			continue;
+		if (strcmp (ent->classname, "detpack"))
+			continue;
+		if (ent->owner != charge->owner)
+			continue;
+
+		count++;
+
+		if ((ent != charge) && (oldest == charge || ent->timestamp < oldest->timestamp))
+			oldest = ent;
+	}
+
+	if (count > MAX_ACTIVE_DETPACKS && oldest)
+		detpack_detonate (oldest);
+}
+
+/*
+=============
+fire_detpack
+
+Spawn the thrown detpack projectile and enforce the per-owner count cap.
+=============
+*/
 edict_t *fire_detpack (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, float damage_radius)
 {
-    edict_t *charge;
+	edict_t *charge;
 
-    charge = G_Spawn ();
-    VectorCopy (start, charge->s.origin);
-    VectorCopy (start, charge->s.old_origin);
-    vectoangles (aimdir, charge->s.angles);
-    VectorScale (aimdir, speed, charge->velocity);
-    charge->movetype = MOVETYPE_BOUNCE;
-    charge->clipmask = MASK_SHOT;
-    charge->solid = SOLID_BBOX;
-    VectorSet (charge->mins, -8, -8, 0);
-    VectorSet (charge->maxs, 8, 8, 16);
-    charge->s.modelindex = gi.modelindex ("models/objects/detpack/tris.md2");
-    charge->s.effects = EF_GRENADE;
-    charge->owner = self;
-    charge->touch = detpack_touch;
-    charge->think = detpack_arm;
-    charge->nextthink = level.time + 0.2f;
-    charge->dmg = damage;
-    charge->radius_dmg = damage;
-    charge->dmg_radius = damage_radius;
-    charge->classname = "detpack";
-    charge->takedamage = DAMAGE_YES;
-    charge->die = detpack_die;
+	charge = G_Spawn ();
+	VectorCopy (start, charge->s.origin);
+	VectorCopy (start, charge->s.old_origin);
+	vectoangles (aimdir, charge->s.angles);
+	VectorScale (aimdir, speed, charge->velocity);
+	charge->movetype = MOVETYPE_BOUNCE;
+	charge->clipmask = MASK_SHOT;
+	charge->solid = SOLID_BBOX;
+	VectorSet (charge->mins, -8, -8, 0);
+	VectorSet (charge->maxs, 8, 8, 16);
+	charge->s.modelindex = gi.modelindex ("models/objects/detpack/tris.md2");
+	charge->s.effects = EF_GRENADE;
+	charge->owner = self;
+	charge->touch = detpack_touch;
+	charge->think = detpack_arm;
+	charge->nextthink = level.time + 0.2f;
+	charge->dmg = damage;
+	charge->radius_dmg = damage;
+	charge->dmg_radius = damage_radius;
+	charge->classname = "detpack";
+	charge->takedamage = DAMAGE_YES;
+	charge->die = detpack_die;
+	charge->timestamp = level.time;
 
-    gi.linkentity (charge);
+	gi.linkentity (charge);
+	detpack_enforce_limit (charge);
 
-    return charge;
+	return charge;
 }
 
+/*
+=============
+remote_detonator_trigger
+
+Detonate every active detpack that belongs to the specified owner.
+=============
+*/
 void remote_detonator_trigger (edict_t *owner)
 {
-    int             i;
-    edict_t *ent;
+	int		i;
+	edict_t	*ent;
 
-    for (i = 1; i < globals.num_edicts; i++)
-    {
-        ent = &g_edicts[i];
-        if (!ent->inuse)
-            continue;
-        if (!ent->classname)
-            continue;
-        if (strcmp (ent->classname, "detpack"))
-            continue;
-        if (ent->owner != owner)
-            continue;
+	for (i = 1; i < globals.num_edicts; i++)
+	{
+		ent = &g_edicts[i];
+		if (!ent->inuse)
+			continue;
+		if (!ent->classname)
+			continue;
+		if (strcmp (ent->classname, "detpack"))
+			continue;
+		if (ent->owner != owner)
+			continue;
 
-        detpack_detonate (ent);
-    }
+		detpack_detonate (ent);
+	}
 }
 
 static void proximity_mine_explode (edict_t *self, edict_t *target)
