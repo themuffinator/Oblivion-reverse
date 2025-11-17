@@ -5,9 +5,10 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# Collect every C source under src/game.
+# Collect every C source under src/game and src/common.
 file(GLOB GAME_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/game/*.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/common/*.c"
 )
 
 if(GAME_SOURCES STREQUAL "")
@@ -19,6 +20,7 @@ add_library(oblivion_game MODULE ${GAME_SOURCES})
 target_include_directories(oblivion_game
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src/game
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/common
 )
 
 target_compile_definitions(oblivion_game
