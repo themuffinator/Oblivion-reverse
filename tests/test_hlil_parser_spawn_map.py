@@ -53,7 +53,7 @@ class HLILParserSpawnMapStrcmpTest(unittest.TestCase):
 
         spawn_map = parser.spawn_map
         self.assertIn("misc_actor", spawn_map)
-        self.assertEqual(spawn_map["misc_actor"], "sub_10037cd0")
+        self.assertEqual(spawn_map["misc_actor"], "sub_1001f460")
 
     def test_extracts_spawn_entries_from_spawn_tables_and_switches(self) -> None:
         parser = HLILParser(Path("references/HLIL/oblivion/gamex86.dll_hlil.txt"))
@@ -96,6 +96,12 @@ class HLILParserSpawnMapStrcmpTest(unittest.TestCase):
         switch_entries = parser._extract_spawn_map_from_spawn_tables(switch_block)
         self.assertEqual(switch_entries["func_water"], "sub_10005000")
         self.assertEqual(switch_entries["func_conveyor"], "sub_10006000")
+
+    def test_spawn_table_entries_include_rotate_train(self) -> None:
+        parser = HLILParser(Path("references/HLIL/oblivion/gamex86.dll_hlil.txt"))
+        spawn_map = parser.spawn_map
+        self.assertIn("func_rotate_train", spawn_map)
+        self.assertEqual(spawn_map["func_rotate_train"], "sub_10015750")
 
 
 if __name__ == "__main__":
