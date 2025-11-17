@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "g_local.h"
 #include "m_actor.h"
+#include "m_actor_anim.h"
 
 #define	MAX_ACTOR_NAMES		8
 #define ACTOR_CHAT_COOLDOWN	2.0f
