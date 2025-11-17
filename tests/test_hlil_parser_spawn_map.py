@@ -55,6 +55,48 @@ class HLILParserSpawnMapStrcmpTest(unittest.TestCase):
         self.assertIn("misc_actor", spawn_map)
         self.assertEqual(spawn_map["misc_actor"], "sub_10037cd0")
 
+    def test_extracts_spawn_entries_from_spawn_tables_and_switches(self) -> None:
+        parser = HLILParser(Path("references/HLIL/oblivion/gamex86.dll_hlil.txt"))
+
+        block = [
+            "10000000  spawn_t spawn_table[] = {",
+            "10000004      { data_1004aaa0, sub_10001000 }",
+            "10000008      { &data_1004bbb0, sub_10002000 }",
+            "1000000c      { 0x1004ccc0, sub_10003000 }",
+            "10000010      { \"func_gate\", sub_10004000 }",
+            "10000014  }",
+        ]
+        literal_map = {
+            "data_1004aaa0": "item_health",
+            "data_1004bbb0": "item_armor",
+            "data_1004ccc0": "func_plat",
+            "0x1004ccc0": "func_plat",
+        }
+        table_entries = parser._extract_spawn_map_from_spawn_tables(block, literal_map)
+        self.assertEqual(table_entries["item_health"], "sub_10001000")
+        self.assertEqual(table_entries["item_armor"], "sub_10002000")
+        self.assertEqual(table_entries["func_plat"], "sub_10003000")
+        self.assertEqual(table_entries["func_gate"], "sub_10004000")
+
+        switch_block = [
+            "10000020  switch (classname_hash)",
+            "10000024      case 0x1:",
+            "10000028          if (sub_10038b20(*(arg1 + 0x118), \"func_water\") == 0)",
+            "1000002c              return sub_10005000(arg1)",
+            "10000030      case 0x2:",
+            "10000034          if (sub_10038b20(*(arg1 + 0x118), \"func_conveyor\") == 0)",
+            "10000038              goto label_10000060",
+            "1000003c      default:",
+            "1000003c          goto label_10000080",
+            "10000060  label_10000060:",
+            "10000064      return sub_10006000(arg1)",
+            "10000080  label_10000080:",
+            "10000084      return sub_10007000(arg1)",
+        ]
+        switch_entries = parser._extract_spawn_map_from_spawn_tables(switch_block)
+        self.assertEqual(switch_entries["func_water"], "sub_10005000")
+        self.assertEqual(switch_entries["func_conveyor"], "sub_10006000")
+
 
 if __name__ == "__main__":
     unittest.main()

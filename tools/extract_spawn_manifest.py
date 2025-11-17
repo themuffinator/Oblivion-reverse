@@ -91,6 +91,7 @@ class HLILParser:
         self._function_blocks: Optional[Dict[str, List[str]]] = None
         self._fields: Optional[Dict[int, FieldInfo]] = None
         self._spawn_map: Optional[Dict[str, str]] = None
+        self._string_literals: Optional[Dict[str, str]] = None
 
     # -- general helpers --
     def _iter_source_paths(self) -> Iterable[Path]:
@@ -181,6 +182,7 @@ class HLILParser:
     def spawn_map(self) -> Dict[str, str]:
         if self._spawn_map is None:
             spawn_entries: Dict[str, str] = {}
+            literal_map = self._string_literal_map()
             ptr_pattern = re.compile(
                 r"^(?:\d+:)?\s*100[0-9a-f]+\s+char \(\* (?P<label>data_[0-9a-f]+)\)\[[^]]+\] = (?P<target>data_[0-9a-f]+) {\"(?P<name>[^\"]+)\"}"
             )
@@ -215,11 +217,131 @@ class HLILParser:
                         if follow_func:
                             spawn_entries[classname] = follow_func
             for block in self.function_blocks.values():
+                table_entries = self._extract_spawn_map_from_spawn_tables(block, literal_map)
+                for classname, func in table_entries.items():
+                    if classname not in spawn_entries:
+                        spawn_entries[classname] = func
                 for classname, func in self._extract_spawn_map_from_strcmp(block).items():
                     if classname not in spawn_entries:
                         spawn_entries[classname] = func
             self._spawn_map = spawn_entries
         return self._spawn_map
+
+    def _string_literal_map(self) -> Dict[str, str]:
+        if self._string_literals is None:
+            literal_map: Dict[str, str] = {}
+            ptr_pattern = re.compile(
+                r"^(?:\d+:)?\s*100[0-9a-f]+\s+char \(\* (?P<label>data_[0-9a-f]+)\)\[[^]]+\] = (?P<target>data_[0-9a-f]+) {\"(?P<name>[^\"]+)\"}"
+            )
+            for source in self._sources:
+                for raw_line in source.lines:
+                    match = ptr_pattern.match(raw_line)
+                    if not match:
+                        continue
+                    name = match.group("name")
+                    for key in (match.group("label"), match.group("target")):
+                        normalized = key.lower()
+                        literal_map[normalized] = name
+                        if key.startswith("data_"):
+                            literal_map[f"0x{key.split('_', 1)[1].lower()}"] = name
+            self._string_literals = literal_map
+        return self._string_literals
+
+    def _normalize_classname(self, classname: str) -> str:
+        return classname.strip().strip("\0")
+
+    def _extract_spawn_map_from_spawn_tables(
+        self,
+        block: List[str],
+        literal_map: Optional[Dict[str, str]] = None,
+    ) -> Dict[str, str]:
+        if not block:
+            return {}
+        if literal_map is None:
+            literal_map = self._string_literal_map()
+
+        results: Dict[str, str] = {}
+        block_text = "\n".join(block)
+        entry_pattern = re.compile(
+            r"\{\s*(?P<raw>(?:\&\s*)?data_[0-9a-f]+|0x[0-9a-f]+|\"[^\"]+\")\s*,\s*(?P<func>sub_[0-9a-f]+)\s*\}",
+            re.IGNORECASE,
+        )
+        for match in entry_pattern.finditer(block_text):
+            raw = match.group("raw").strip()
+            func = match.group("func")
+            classname = self._resolve_classname_from_literal(raw, literal_map)
+            if not classname:
+                continue
+            normalized = self._normalize_classname(classname)
+            if normalized not in results:
+                results[normalized] = func
+
+        if not any("switch (" in line for line in block):
+            return results
+
+        goto_pattern = re.compile(r"goto\s+(label_[0-9a-f]+)", re.IGNORECASE)
+        return_pattern = re.compile(
+            r"return\s+(sub_[0-9a-f]+)(?:\b|(?=\())", re.IGNORECASE
+        )
+        label_pattern = re.compile(r"(label_[0-9a-f]+):", re.IGNORECASE)
+        label_indices: Dict[str, int] = {}
+        for idx, line in enumerate(block):
+            m_label = label_pattern.search(line)
+            if m_label:
+                label_indices[m_label.group(1)] = idx
+
+        case_indices: List[int] = []
+        case_pattern = re.compile(r"\b(case|default)\b", re.IGNORECASE)
+        for idx, line in enumerate(block):
+            if case_pattern.search(line):
+                case_indices.append(idx)
+        if not case_indices:
+            return results
+        case_indices.append(len(block))
+
+        strcmp_call_pattern = re.compile(
+            r"sub_10038b20\([^,]+,\s*\"([^\"]+)\"\)", re.IGNORECASE
+        )
+        for pos, start in enumerate(case_indices[:-1]):
+            end = case_indices[pos + 1]
+            for idx in range(start, end):
+                line = block[idx]
+                for literal_match in strcmp_call_pattern.finditer(line):
+                    classname = self._normalize_classname(literal_match.group(1))
+                    if classname in results:
+                        continue
+                    target = self._resolve_strcmp_chain(
+                        block,
+                        idx + 1,
+                        end,
+                        goto_pattern,
+                        return_pattern,
+                        label_indices,
+                    )
+                    if target:
+                        results[classname] = target
+        return results
+
+    def _resolve_classname_from_literal(
+        self, raw: str, literal_map: Dict[str, str]
+    ) -> Optional[str]:
+        token = raw.strip()
+        if token.startswith("\"") and token.endswith("\""):
+            return token.strip("\"")
+        if token.startswith("&"):
+            token = token[1:].strip()
+        lookup = literal_map.get(token.lower())
+        if lookup:
+            return lookup
+        if token.lower().startswith("0x"):
+            try:
+                as_int = int(token, 16)
+            except ValueError:
+                return None
+            lookup = literal_map.get(f"data_{as_int:08x}")
+            if lookup:
+                return lookup
+        return None
 
     def _find_next_function_decl(
         self,
@@ -244,7 +366,7 @@ class HLILParser:
             r'(?:const\s+)?char(?:\s+const)?\s*\*\s+[^=]+\s*=\s*"([^"]+)"'
         )
         goto_pattern = re.compile(r'goto\s+(label_[0-9a-f]+)')
-        return_pattern = re.compile(r'return\s+(sub_[0-9a-f]+)\b')
+        return_pattern = re.compile(r'return\s+(sub_[0-9a-f]+)(?:\b|(?=\())')
         label_pattern = re.compile(r'(label_[0-9a-f]+):')
 
         label_indices: Dict[str, int] = {}
@@ -266,6 +388,7 @@ class HLILParser:
                 if pos + 1 < len(literal_positions)
                 else len(block)
             )
+            classname = self._normalize_classname(classname)
             target = self._resolve_strcmp_chain(
                 block,
                 line_idx + 1,
