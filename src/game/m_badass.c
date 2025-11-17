@@ -259,6 +259,27 @@ void ClipGibVelocity (edict_t *ent);
 
 /*
 =============
+badass_gib_explosion
+
+Spawns the badass corpse explosion temp event and applies the same radius
+damage burst used elsewhere in the original game.
+=============
+*/
+static void badass_gib_explosion (edict_t *self)
+{
+	if (!self)
+		return;
+
+	gi.WriteByte (svc_temp_entity);
+	gi.WriteByte (TE_EXPLOSION1);
+	gi.WritePosition (self->s.origin);
+	gi.multicast (self->s.origin, MULTICAST_PVS);
+
+	T_RadiusDamage (self, self, 100.0f, NULL, 100.0f, MOD_EXPLOSIVE);
+}
+
+/*
+=============
 badass_die_gibs
 
 Spawns the per-limb badass gibs with placement and velocity that mirrors the
@@ -437,20 +458,32 @@ static void badass_dead (edict_t *self)
 
 static void badass_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
 {
-        if (self->health <= self->gib_health)
-        {
-                gi.sound (self, CHAN_VOICE, sound_death, 1.0f, ATTN_NORM, 0);
-                badass_die_gibs (self, damage);
-                self->deadflag = DEAD_DEAD;
-                return;
-        }
+	if (self->health <= self->gib_health)
+	{
+		gi.sound (self, CHAN_VOICE, sound_death, 1.0f, ATTN_NORM, 0);
+		badass_die_gibs (self, damage);
+		badass_gib_explosion (self);
 
-        if (self->deadflag == DEAD_DEAD)
-                return;
+		vec3_t saved_origin;
+		vec3_t saved_old_origin;
+		VectorCopy (self->s.origin, saved_origin);
+		VectorCopy (self->s.old_origin, saved_old_origin);
 
-        self->deadflag = DEAD_DYING;
-        gi.sound (self, CHAN_VOICE, sound_death, 1.0f, ATTN_NORM, 0);
-        self->monsterinfo.currentmove = &badass_move_death;
+		self->s.origin[2] -= 2.0f;
+		self->s.old_origin[2] -= 2.0f;
+		badass_gib_explosion (self);
+		VectorCopy (saved_origin, self->s.origin);
+		VectorCopy (saved_old_origin, self->s.old_origin);
+		self->deadflag = DEAD_DEAD;
+		return;
+	}
+
+	if (self->deadflag == DEAD_DEAD)
+		return;
+
+	self->deadflag = DEAD_DYING;
+	gi.sound (self, CHAN_VOICE, sound_death, 1.0f, ATTN_NORM, 0);
+	self->monsterinfo.currentmove = &badass_move_death;
 }
 
 void SP_monster_badass (edict_t *self)
