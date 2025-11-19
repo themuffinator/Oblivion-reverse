@@ -1210,6 +1210,15 @@ static void Actor_UseOblivion(edict_t *self, edict_t *other, edict_t *activator)
 }
 
 
+/*
+=============
+Actor_SpawnOblivion
+
+Spawn the Oblivion actors with the retail HLIL semantics so helper functions
+such as sub_1001f380/sub_1001ef70 see the same spawnflag writes as the retail
+binary.
+=============
+*/
 static qboolean Actor_SpawnOblivion(edict_t *self)
 {
 	static const char *const kDefaultTargetName = "Yo Mama";
@@ -1222,9 +1231,12 @@ static qboolean Actor_SpawnOblivion(edict_t *self)
 
 	if (!self->targetname)
 	{
-		/* `sub_1001f460` seeds the "Yo Mama" targetname and flips the hidden
-		 * START_ON bit whenever a mapper omits one, so mirror that behaviour
-		 * instead of treating the fallback as an idle actor.
+		/*
+		 * sub_1001f460 defaults the name to "Yo Mama" and raises bit 0x20
+		 * (ACTOR_SPAWNFLAG_START_ON) when the mapper omits a targetname so the
+		 * controller helpers in sub_1001f380/sub_1001ef70 can still activate the
+		 * actor.  Mirror that write here so compatibility reports have context
+		 * for the hidden spawnflag.
 		 */
 		self->targetname = (char *)kDefaultTargetName;
 		self->spawnflags |= ACTOR_SPAWNFLAG_START_ON;
