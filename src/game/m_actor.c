@@ -201,6 +201,37 @@ static void Actor_PathResetState(edict_t *self)
 
 /*
 =============
+Actor_ApplySpawnAIFeatures
+
+Mirror the `sub_1001f460` HLIL writes so the actor spawn only touches
+`AI_ACTOR_PATH_IDLE`, `AI_ACTOR_FRIENDLY`, and `AI_STAND_GROUND` the way the
+retail DLL does. Unlike Quake II, the Oblivion binary never toggles
+`AI_GOOD_GUY` here, so the translation leaves that bit untouched on purpose to
+avoid inventing behaviour that the dump does not prove exists.
+=============
+*/
+static void Actor_ApplySpawnAIFeatures(edict_t *self)
+{
+	const int spawnflags = self ? self->spawnflags : 0;
+
+	if (!self)
+		return;
+
+	if (self->target)
+		self->monsterinfo.aiflags &= ~AI_ACTOR_PATH_IDLE;
+	else
+		self->monsterinfo.aiflags |= AI_ACTOR_PATH_IDLE;
+
+	if (spawnflags & ACTOR_SPAWNFLAG_WIMPY)
+		self->monsterinfo.aiflags &= ~AI_ACTOR_FRIENDLY;
+	else
+		self->monsterinfo.aiflags |= AI_ACTOR_FRIENDLY;
+
+	self->monsterinfo.aiflags |= AI_STAND_GROUND;
+}
+
+/*
+=============
 Actor_PathSelectIdleAnimation
 
 Randomise the idle animation and face the current controller while the
@@ -1179,6 +1210,15 @@ static void Actor_UseOblivion(edict_t *self, edict_t *other, edict_t *activator)
 }
 
 
+/*
+=============
+Actor_SpawnOblivion
+
+Spawn the Oblivion actors with the retail HLIL semantics so helper functions
+such as sub_1001f380/sub_1001ef70 see the same spawnflag writes as the retail
+binary.
+=============
+*/
 static qboolean Actor_SpawnOblivion(edict_t *self)
 {
 	static const char *const kDefaultTargetName = "Yo Mama";
@@ -1191,6 +1231,13 @@ static qboolean Actor_SpawnOblivion(edict_t *self)
 
 	if (!self->targetname)
 	{
+		/*
+		 * sub_1001f460 defaults the name to "Yo Mama" and raises bit 0x20
+		 * (ACTOR_SPAWNFLAG_START_ON) when the mapper omits a targetname so the
+		 * controller helpers in sub_1001f380/sub_1001ef70 can still activate the
+		 * actor.  Mirror that write here so compatibility reports have context
+		 * for the hidden spawnflag.
+		 */
 		self->targetname = (char *)kDefaultTargetName;
 		self->spawnflags |= ACTOR_SPAWNFLAG_START_ON;
 	}
@@ -1222,21 +1269,7 @@ static qboolean Actor_SpawnOblivion(edict_t *self)
 	self->speed = 200;
 	self->mass = 200;
 	Actor_PathResetState(self);
-
-	if (!(self->spawnflags & ACTOR_SPAWNFLAG_WIMPY))
-	{
-		self->monsterinfo.aiflags |= AI_GOOD_GUY;
-		self->monsterinfo.aiflags |= AI_ACTOR_FRIENDLY;
-	}
-	else
-	{
-		self->monsterinfo.aiflags &= ~AI_GOOD_GUY;
-	}
-
-	if (!self->target)
-		self->monsterinfo.aiflags |= AI_ACTOR_PATH_IDLE;
-
-	self->monsterinfo.aiflags |= AI_STAND_GROUND;
+	Actor_ApplySpawnAIFeatures(self);
 
 	self->pain = actor_pain;
 	self->die = actor_die;
@@ -1313,6 +1346,32 @@ for JUMP only:
 
 /*
 =============
+TargetActor_ConfigureJump
+
+Apply the HLIL-confirmed jump defaults so `SP_target_actor` mirrors
+`sub_1001f930` while keeping spawnflag parsing out of the spawn function
+itself.
+=============
+*/
+static void TargetActor_ConfigureJump(edict_t *self)
+{
+	const int spawnflags = self->spawnflags;
+
+	if (!(spawnflags & TARGET_ACTOR_FLAG_JUMP))
+		return;
+
+	if (!self->speed)
+		self->speed = 200;
+	if (!st.height)
+		st.height = 200;
+	if (self->s.angles[YAW] == 0)
+		self->s.angles[YAW] = 360;
+	G_SetMovedir(self->s.angles, self->movedir);
+	self->movedir[2] = st.height;
+}
+
+/*
+=============
 target_actor_touch
 
 Handle scripted path targets and immediate actions when an actor
@@ -1325,6 +1384,7 @@ void target_actor_touch (edict_t *self, edict_t *other, cplane_t *plane, csurfac
 	edict_t *pathtarget_ent;
 	edict_t *next_target;
 	float wait;
+	const int spawnflags = self->spawnflags;
 
 	if (other->movetarget != self)
 		return;
@@ -1346,7 +1406,7 @@ void target_actor_touch (edict_t *self, edict_t *other, cplane_t *plane, csurfac
 		Actor_BroadcastMessage(other, self->message);
 	}
 
-	if (self->spawnflags & 1)		//jump
+	if (spawnflags & TARGET_ACTOR_FLAG_JUMP)	//jump
 	{
 		other->velocity[0] = self->movedir[0] * self->speed;
 		other->velocity[1] = self->movedir[1] * self->speed;
@@ -1359,7 +1419,7 @@ void target_actor_touch (edict_t *self, edict_t *other, cplane_t *plane, csurfac
 		}
 	}
 
-	if (self->spawnflags & 2)	//shoot
+	if (spawnflags & TARGET_ACTOR_FLAG_SHOOT)	//shoot
 	{
 		if (self->pathtarget)
 			pathtarget_ent = G_PickTarget(self->pathtarget);
@@ -1368,7 +1428,7 @@ void target_actor_touch (edict_t *self, edict_t *other, cplane_t *plane, csurfac
 		other->goalentity = pathtarget_ent;
 		other->movetarget = pathtarget_ent;
 
-		if (self->spawnflags & 32)
+		if (spawnflags & TARGET_ACTOR_FLAG_BRUTAL)
 			other->monsterinfo.aiflags |= AI_BRUTAL;
 
 		other->monsterinfo.aiflags |= AI_STAND_GROUND | AI_ACTOR_SHOOT_ONCE;
@@ -1379,15 +1439,15 @@ void target_actor_touch (edict_t *self, edict_t *other, cplane_t *plane, csurfac
 		else
 			actor_attack(other);
 	}
-	else if (self->spawnflags & 4)	//attack
+	else if (spawnflags & TARGET_ACTOR_FLAG_ATTACK)	//attack
 	{
 		other->enemy = pathtarget_ent;
 		if (other->enemy)
 		{
 			other->goalentity = other->enemy;
-			if (self->spawnflags & 32)
+			if (spawnflags & TARGET_ACTOR_FLAG_BRUTAL)
 				other->monsterinfo.aiflags |= AI_BRUTAL;
-			if (self->spawnflags & 0x12)
+			if (spawnflags & (TARGET_ACTOR_FLAG_HOLD | TARGET_ACTOR_FLAG_SHOOT))
 			{
 				other->monsterinfo.aiflags |= AI_STAND_GROUND;
 				actor_stand (other);
@@ -1447,17 +1507,7 @@ void SP_target_actor (edict_t *self)
 	VectorSet (self->maxs, 8, 8, 8);
 	self->svflags = SVF_NOCLIENT;
 
-	if (self->spawnflags & 1)
-	{
-		if (!self->speed)
-			self->speed = 200;
-		if (!st.height)
-			st.height = 200;
-		if (self->s.angles[YAW] == 0)
-			self->s.angles[YAW] = 360;
-		G_SetMovedir (self->s.angles, self->movedir);
-		self->movedir[2] = st.height;
-	}
+	TargetActor_ConfigureJump(self);
 
 	gi.linkentity (self);
 }

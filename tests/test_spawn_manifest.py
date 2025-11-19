@@ -44,7 +44,49 @@ class SpawnManifestSnapshotTest(unittest.TestCase):
             "SpawnItemFromItemlist",
             "weapon_rtdu HLIL manifest entry does not match expected function",
         )
+        repo_manifest = current.get("combined", {}).get("repo", {})
+        self.assertIn(
+            "monster_makron",
+            repo_manifest,
+            "Expected monster_makron entry missing from repo manifest",
+        )
+        self.assertEqual(
+            repo_manifest["monster_makron"].get("function"),
+            "SP_monster_makron",
+            "monster_makron repo manifest entry does not match expected function",
+        )
+        missing_in_repo = current.get("comparison", {}).get("missing_in_repo", [])
+        self.assertNotIn(
+            "monster_makron",
+            missing_in_repo,
+            "monster_makron should be spawnable by maps but is still reported missing",
+        )
         self.assertEqual(current, expected)
+
+
+class SpawnManifestControllersTest(unittest.TestCase):
+    def test_target_controllers_are_extracted(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        script = repo_root / "tools" / "extract_spawn_manifest.py"
+        result = subprocess.run(
+            [sys.executable, str(script)],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        manifest = json.loads(result.stdout)
+        hlil_manifest = manifest.get("combined", {}).get("hlil", {})
+        required = {
+            "target_actor": "target_actor controllers should be present",
+            "target_crosslevel_target": "Missing target_crosslevel_target controller entry",
+        }
+        for classname, message in required.items():
+            self.assertIn(classname, hlil_manifest, message)
+            func_name = hlil_manifest[classname].get("function", "")
+            self.assertTrue(
+                func_name.startswith("sub_"),
+                f"{classname} should dispatch to a sub_* function, got {func_name!r}",
+            )
 
 
 if __name__ == "__main__":
