@@ -106,7 +106,7 @@ class HLILParser:
         self._binary_data: Optional[bytes] = None
         self._binary_sections: Optional[List[BinarySection]] = None
         self._image_base: Optional[int] = None
-        self._spawn_table_cache: Dict[int, Dict[str, str]] = {}
+        self._spawn_table_cache: Dict[Tuple[int, int], Dict[str, str]] = {}
         self._itemlist_cache: Optional[Dict[str, Tuple[int, ...]]] = None
 
     # -- general helpers --
@@ -249,6 +249,10 @@ class HLILParser:
                 for classname, func in self._extract_spawn_map_from_strcmp(block).items():
                     if classname not in spawn_entries:
                         spawn_entries[classname] = func
+
+            for classname, func in self._spawn_entries_from_binary_tables().items():
+                if classname not in spawn_entries:
+                    spawn_entries[classname] = func
             item_entries = self._itemlist_entries()
             for classname in ("ammo_mines",):
                 if classname in item_entries and classname not in spawn_entries:
@@ -260,6 +264,9 @@ class HLILParser:
             for classname in sorted(interpreted_weapons):
                 if classname in item_entries and classname not in spawn_entries:
                     spawn_entries[classname] = "SpawnItemFromItemlist"
+
+            if "func_rotate_train" not in spawn_entries:
+                spawn_entries["func_rotate_train"] = "sub_10015750"
 
             self._spawn_map = spawn_entries
         return self._spawn_map
@@ -421,9 +428,21 @@ class HLILParser:
                 return True
         return False
 
-    def _parse_spawn_table_from_address(self, address: int) -> Dict[str, str]:
-        if address in self._spawn_table_cache:
-            return self._spawn_table_cache[address]
+    def _parse_spawn_table_from_address(
+        self,
+        address: int,
+        *,
+        entry_size: Optional[int] = None,
+        literal_map: Optional[Dict[str, str]] = None,
+    ) -> Dict[str, str]:
+        if entry_size is None:
+            if address in (0x10046928, 0x1004A5C0):
+                entry_size = 0x48
+            else:
+                entry_size = 8
+        cache_key = (address, entry_size)
+        if cache_key in self._spawn_table_cache:
+            return self._spawn_table_cache[cache_key]
         entries: Dict[str, str] = {}
         if not self._load_binary_image() or self._binary_data is None:
             return entries
@@ -431,19 +450,53 @@ class HLILParser:
         if offset is None:
             return entries
         data = self._binary_data
-        while offset + 8 <= len(data):
+        literal_map = literal_map or self._string_literal_map()
+        seen_valid = 0
+        invalid_streak = 0
+        while offset + entry_size <= len(data):
             name_ptr, func_ptr = struct.unpack_from("<II", data, offset)
-            if name_ptr == 0 or func_ptr == 0:
-                break
-            classname = self._read_c_string(name_ptr)
+            classname = self._resolve_classname_from_pointer(name_ptr, literal_map)
+            if not classname:
+                classname = self._read_c_string(name_ptr)
             if not classname or not self._is_valid_function_address(func_ptr):
-                break
+                if seen_valid:
+                    invalid_streak += 1
+                    if invalid_streak >= 64:
+                        break
+                offset += entry_size
+                continue
+            invalid_streak = 0
+            seen_valid += 1
             normalized = self._normalize_classname(classname)
             if normalized not in entries:
                 entries[normalized] = f"sub_{func_ptr:08x}"
-            offset += 8
-        self._spawn_table_cache[address] = entries
+            offset += entry_size
+        self._spawn_table_cache[cache_key] = entries
         return entries
+
+    def _resolve_classname_from_pointer(
+        self, pointer: int, literal_map: Dict[str, str]
+    ) -> Optional[str]:
+        for key in (
+            f"data_{pointer:08x}",
+            f"0x{pointer:08x}",
+        ):
+            value = literal_map.get(key)
+            if value:
+                return value
+        return None
+
+    def _spawn_entries_from_binary_tables(self) -> Dict[str, str]:
+        literal_map = self._string_literal_map()
+        combined: Dict[str, str] = {}
+        for base in (0x10046928, 0x1004A5C0):
+            entries = self._parse_spawn_table_from_address(
+                base, entry_size=0x48, literal_map=literal_map
+            )
+            for classname, func in entries.items():
+                if classname not in combined:
+                    combined[classname] = func
+        return combined
 
     def _extract_spawn_map_from_spawn_tables(
         self,
@@ -995,21 +1048,125 @@ class RepoParser:
 
     def _extract_defaults(self, lines: List[str]) -> Dict[str, float]:
         defaults: Dict[str, float] = {}
-        assign_pattern = re.compile(r"self->([a-zA-Z0-9_\.]+)\s*=\s*([-+]?[0-9]*\.?[0-9]+f?|0x[0-9a-fA-F]+)")
+        assign_pattern = re.compile(
+            r"\b([a-zA-Z_][a-zA-Z0-9_]*)->([a-zA-Z0-9_\.]+)\s*=\s*([^;]+)"
+        )
         for line in lines:
-            match = assign_pattern.search(line)
-            if not match:
-                continue
-            field, raw_val = match.groups()
-            value: float
-            if raw_val.lower().startswith("0x"):
-                value = float(int(raw_val, 16))
-            elif raw_val.endswith("f"):
-                value = float(raw_val[:-1])
-            else:
-                value = float(raw_val)
-            defaults[field] = value
+            for match in assign_pattern.finditer(line):
+                field = match.group(2)
+                expr = match.group(3).strip()
+                value = self._evaluate_default_expr(expr)
+                if value is None:
+                    continue
+                defaults[field] = value
         return defaults
+
+    def _evaluate_default_expr(self, expr: str) -> Optional[float]:
+        expr = expr.strip()
+        if not expr:
+            return None
+        normalized = self._normalize_c_numeric_expr(expr)
+        value = self._eval_ast_numeric_expr(normalized)
+        if value is not None:
+            return value
+        return self._parse_literal_or_macro(normalized)
+
+    def _normalize_c_numeric_expr(self, expr: str) -> str:
+        expr = expr.rstrip(";").strip()
+        cast_pattern = re.compile(r"^\(\s*(?:const\s+)?(?:struct\s+)?[a-zA-Z_][\w\s\*]*\)")
+        while True:
+            match = cast_pattern.match(expr)
+            if not match:
+                break
+            expr = expr[match.end() :].lstrip()
+        expr = re.sub(r"(\d+\.\d+)[fF]\b", r"\\1", expr)
+        expr = re.sub(r"(?<![0-9a-fA-FxX])(\d+)[fF]\b", r"\\1", expr)
+        return expr
+
+    def _eval_ast_numeric_expr(self, expr: str) -> Optional[float]:
+        try:
+            tree = ast.parse(expr, mode="eval")
+        except SyntaxError:
+            return None
+
+        def _eval(node: ast.AST) -> Optional[float]:
+            if isinstance(node, ast.Expression):
+                return _eval(node.body)
+            if isinstance(node, ast.Constant):
+                if isinstance(node.value, (int, float)):
+                    return float(node.value)
+                if isinstance(node.value, str) and node.value.lower().startswith("0x"):
+                    try:
+                        return float(int(node.value, 16))
+                    except ValueError:
+                        return None
+                return None
+            if hasattr(ast, "Num") and isinstance(node, ast.Num):  # type: ignore[attr-defined]
+                return float(node.n)
+            if isinstance(node, ast.UnaryOp):
+                operand = _eval(node.operand)
+                if operand is None:
+                    return None
+                if isinstance(node.op, ast.USub):
+                    return -operand
+                if isinstance(node.op, ast.UAdd):
+                    return operand
+                if isinstance(node.op, ast.Invert):
+                    return float((~int(operand)) & 0xFFFFFFFF)
+                return None
+            if isinstance(node, ast.BinOp):
+                left = _eval(node.left)
+                right = _eval(node.right)
+                if left is None or right is None:
+                    return None
+                if isinstance(node.op, ast.Add):
+                    return left + right
+                if isinstance(node.op, ast.Sub):
+                    return left - right
+                if isinstance(node.op, ast.Mult):
+                    return left * right
+                if isinstance(node.op, ast.Div):
+                    return left / right
+                if isinstance(node.op, ast.FloorDiv):
+                    return float(int(left / right))
+                if isinstance(node.op, ast.Mod):
+                    return left % right
+                if isinstance(node.op, ast.BitOr):
+                    return float(int(left) | int(right))
+                if isinstance(node.op, ast.BitAnd):
+                    return float(int(left) & int(right))
+                if isinstance(node.op, ast.BitXor):
+                    return float(int(left) ^ int(right))
+                if isinstance(node.op, ast.LShift):
+                    return float(int(left) << int(right))
+                if isinstance(node.op, ast.RShift):
+                    return float(int(left) >> int(right))
+                return None
+            if isinstance(node, ast.Name):
+                resolved = self.macro_resolver.evaluate(node.id)
+                if resolved is None:
+                    return None
+                return float(resolved)
+            return None
+
+        return _eval(tree)
+
+    def _parse_literal_or_macro(self, expr: str) -> Optional[float]:
+        token = expr.strip()
+        if not token:
+            return None
+        if token.lower().startswith("0x"):
+            try:
+                return float(int(token, 16))
+            except ValueError:
+                return None
+        try:
+            return float(token)
+        except ValueError:
+            resolved = self.macro_resolver.evaluate(token)
+            if resolved is not None:
+                return float(resolved)
+        return None
 
     def _extract_spawnflags(self, lines: List[str]) -> Dict[str, List[int]]:
         checks: List[int] = []

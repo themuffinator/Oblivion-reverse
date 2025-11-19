@@ -6256,9 +6256,7 @@
       }
     },
     "item_health": {
-      "defaults": {
-        "count": 10.0
-      },
+      "defaults": {},
       "function": "SP_item_health",
       "spawnflags": {
         "assignments": [],
@@ -6973,6 +6971,20 @@
         "sets": []
       }
     },
+    "monster_makron": {
+      "defaults": {
+        "gib_health": -2000.0,
+        "health": 3000.0,
+        "mass": 500.0
+      },
+      "function": "SP_monster_makron",
+      "spawnflags": {
+        "assignments": [],
+        "checks": [],
+        "clears": [],
+        "sets": []
+      }
+    },
     "monster_medic": {
       "defaults": {
         "gib_health": -130.0,
@@ -7168,15 +7180,11 @@
       }
     },
     "target_actor": {
-      "defaults": {
-        "speed": 200.0
-      },
+      "defaults": {},
       "function": "SP_target_actor",
       "spawnflags": {
         "assignments": [],
-        "checks": [
-          1
-        ],
+        "checks": [],
         "clears": [],
         "sets": []
       }

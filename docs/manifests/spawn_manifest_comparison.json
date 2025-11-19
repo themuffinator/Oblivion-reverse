@@ -2344,6 +2344,44 @@
         null
       ]
     },
+    "monster_makron": {
+      "offset_0x12c": [
+        [
+          {
+            "offset": 300,
+            "value": 0
+          }
+        ],
+        null
+      ],
+      "offset_0x140": [
+        [
+          {
+            "offset": 320,
+            "value": 0
+          }
+        ],
+        null
+      ],
+      "offset_0x2c4": [
+        [
+          {
+            "offset": 708,
+            "value": 128
+          }
+        ],
+        null
+      ],
+      "offset_0x390": [
+        [
+          {
+            "offset": 912,
+            "value": 0
+          }
+        ],
+        null
+      ]
+    },
     "monster_mutant": {
       "offset_0x104": [
         [
@@ -6316,8 +6354,7 @@
     "%s/listip.cfg",
     "detpack",
     "grenade",
-    "mine",
-    "monster_makron"
+    "mine"
   ],
   "spawnflag_mismatches": {
     "func_door": {
@@ -6476,14 +6513,6 @@
         ],
         [
           256
-        ]
-      ]
-    },
-    "target_actor": {
-      "checks": [
-        [],
-        [
-          1
         ]
       ]
     },
