@@ -216,7 +216,11 @@
         "function": "sub_10011160",
         "spawnflags": {
           "assignments": [],
-          "checks": [],
+          "checks": [
+            1,
+            2,
+            4
+          ],
           "clears": [],
           "sets": []
         }
@@ -353,7 +357,9 @@
         "spawnflags": {
           "assignments": [],
           "checks": [
-            1
+            1,
+            2,
+            4
           ],
           "clears": [],
           "sets": []
@@ -399,7 +405,10 @@
         "function": "sub_1000f250",
         "spawnflags": {
           "assignments": [],
-          "checks": [],
+          "checks": [
+            2,
+            4
+          ],
           "clears": [],
           "sets": []
         }
@@ -738,6 +747,7 @@
         "spawnflags": {
           "assignments": [],
           "checks": [
+            4,
             8
           ],
           "clears": [],
@@ -770,7 +780,10 @@
         "function": "sub_1000ec40",
         "spawnflags": {
           "assignments": [],
-          "checks": [],
+          "checks": [
+            2,
+            4
+          ],
           "clears": [],
           "sets": []
         }
@@ -969,7 +982,9 @@
         "function": "sub_1000eae0",
         "spawnflags": {
           "assignments": [],
-          "checks": [],
+          "checks": [
+            1
+          ],
           "clears": [],
           "sets": []
         }
@@ -1126,7 +1141,11 @@
         "function": "sub_1001f460",
         "spawnflags": {
           "assignments": [],
-          "checks": [],
+          "checks": [
+            8,
+            32,
+            64
+          ],
           "clears": [],
           "sets": []
         }
@@ -1410,7 +1429,13 @@
         "function": "sub_100102d0",
         "spawnflags": {
           "assignments": [],
-          "checks": [],
+          "checks": [
+            2,
+            4,
+            8,
+            16,
+            32
+          ],
           "clears": [],
           "sets": []
         }
@@ -2708,7 +2733,9 @@
         "function": "sub_1002dcf0",
         "spawnflags": {
           "assignments": [],
-          "checks": [],
+          "checks": [
+            8
+          ],
           "clears": [],
           "sets": []
         }
@@ -3301,7 +3328,10 @@
         "function": "sub_100199c0",
         "spawnflags": {
           "assignments": [],
-          "checks": [],
+          "checks": [
+            1,
+            2
+          ],
           "clears": [],
           "sets": []
         }
@@ -3419,7 +3449,9 @@
             1
           ],
           "clears": [],
-          "sets": []
+          "sets": [
+            4
+          ]
         }
       },
       "trigger_push": {
@@ -3434,7 +3466,9 @@
         "function": "sub_10019850",
         "spawnflags": {
           "assignments": [],
-          "checks": [],
+          "checks": [
+            2
+          ],
           "clears": [],
           "sets": []
         }
@@ -3485,6 +3519,7 @@
           "assignments": [],
           "checks": [
             2,
+            4,
             16
           ],
           "clears": [],
@@ -14195,16 +14230,6 @@
       "mine"
     ],
     "spawnflag_mismatches": {
-      "func_clock": {
-        "checks": [
-          [],
-          [
-            1,
-            2,
-            4
-          ]
-        ]
-      },
       "func_door": {
         "checks": [
           [],
@@ -14227,21 +14252,12 @@
           ]
         ]
       },
-      "func_door_secret": {
-        "checks": [
-          [
-            1
-          ],
-          [
-            1,
-            2,
-            4
-          ]
-        ]
-      },
       "func_explosive": {
         "checks": [
-          [],
+          [
+            2,
+            4
+          ],
           [
             1,
             2,
@@ -14275,6 +14291,7 @@
       "func_train": {
         "checks": [
           [
+            4,
             8
           ],
           [
@@ -14284,7 +14301,10 @@
       },
       "func_wall": {
         "checks": [
-          [],
+          [
+            2,
+            4
+          ],
           [
             1,
             2,
@@ -14316,12 +14336,14 @@
           ]
         ]
       },
-      "light": {
+      "misc_actor": {
         "checks": [
-          [],
           [
-            1
-          ]
+            8,
+            32,
+            64
+          ],
+          []
         ]
       },
       "misc_camera": {
@@ -14329,18 +14351,6 @@
           [],
           [
             1
-          ]
-        ]
-      },
-      "misc_deadsoldier": {
-        "checks": [
-          [],
-          [
-            2,
-            4,
-            8,
-            16,
-            32
           ]
         ]
       },
@@ -14371,7 +14381,9 @@
       },
       "monster_spider": {
         "checks": [
-          [],
+          [
+            8
+          ],
           [
             256
           ]
@@ -14393,27 +14405,19 @@
           ]
         ]
       },
-      "trigger_hurt": {
+      "trigger_push": {
         "checks": [
-          [],
           [
-            1,
             2
-          ]
-        ]
-      },
-      "trigger_once": {
-        "sets": [
-          [],
-          [
-            4
-          ]
+          ],
+          []
         ]
       },
       "trigger_teleport": {
         "checks": [
           [
             2,
+            4,
             16
           ],
           [
