@@ -1,6 +1,7 @@
 import json
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 import unittest
 
@@ -43,6 +44,11 @@ class SpawnManifestSnapshotTest(unittest.TestCase):
             hlil_manifest["weapon_rtdu"].get("function"),
             "sub_10014220",
             "weapon_rtdu HLIL manifest entry does not match expected function",
+        )
+        self.assertEqual(
+            hlil_manifest["ammo_rifleplasma"].get("function"),
+            "sub_10037c80",
+            "ammo_rifleplasma should map to the HLIL function recovered from sub_1000b150",
         )
         repo_manifest = current.get("combined", {}).get("repo", {})
         self.assertIn(
@@ -108,6 +114,40 @@ class SpawnManifestDocsCoverageTest(unittest.TestCase):
                 isinstance(func_name, str) and func_name,
                 f"{classname} should declare a function name",
             )
+
+
+class Sub1000b150LogTest(unittest.TestCase):
+    def test_logged_map_matches_snapshot(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        script = repo_root / "tools" / "extract_spawn_manifest.py"
+        expected_path = (
+            repo_root
+            / "references"
+            / "HLIL"
+            / "oblivion"
+            / "interpreted"
+            / "sub_1000b150_map.json"
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output = Path(tmpdir) / "map.json"
+            subprocess.run(
+                [
+                    sys.executable,
+                    str(script),
+                    "--dump-b150-map",
+                    str(output),
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            current = json.loads(output.read_text(encoding="utf-8"))
+        expected = json.loads(expected_path.read_text(encoding="utf-8"))
+        self.assertEqual(
+            current,
+            expected,
+            "sub_1000b150_map.json is out of date; rerun extract_spawn_manifest.py with --dump-b150-map",
+        )
 
 
 if __name__ == "__main__":
