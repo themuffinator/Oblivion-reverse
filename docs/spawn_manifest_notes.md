@@ -53,13 +53,22 @@ an index relative to `data_10046928`, and toggling the corresponding slots.
 【F:references/HLIL/oblivion/split/types/gamex86.dll_hlil_type_00019_block.txt†L290-L310】 Because the extractor scans for textual string literals, it never sees
 these indirections.
 
-* Instrument `sub_1000b150` (or temporarily sprinkle logging in the HLIL block)
-  to dump the string parameter and the computed `(ptr - &data_10046928) / 0x48`
-  index. Those pairs can be fed back into the manifest generator to seed the
-  missing ammo/weapon entries.
-* When possible, annotate the relevant `data_10046***` char blobs with the
-  high-level names so the extractor’s literal map can associate those addresses
-  with readable classnames on the next pass.
+`tools/extract_spawn_manifest.py` now replays those calls when building the
+manifest: every literal seen in `sub_1000b150("…")` is resolved back to the
+underlying `spawn_t` entry, the `(ptr - &data_10046928) / 0x48` index is
+recorded, and the canonical classname/function pair is fed back into the
+manifest builder so the ammo/weapon rows no longer require manual annotation.
+The interpreted data is stored at
+`references/HLIL/oblivion/interpreted/sub_1000b150_map.json`; regenerate it
+with:
+
+```
+python tools/extract_spawn_manifest.py \
+    --dump-b150-map references/HLIL/oblivion/interpreted/sub_1000b150_map.json
+```
+
+when a new binary is analyzed. The snapshot test will fail if the map drifts,
+making the refresh requirement explicit for contributors.
 
 ### Target/trigger names resolved through `sub_1001ad80`
 

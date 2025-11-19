@@ -109,6 +109,9 @@ class HLILParser:
         self._spawn_table_cache: Dict[Tuple[int, int], Dict[str, str]] = {}
         self._itemlist_cache: Optional[Dict[str, Tuple[int, ...]]] = None
         self._call_graph_entries: Optional[Dict[str, str]] = None
+        self._spawn_table_records_cache: Optional[List[Dict[str, object]]] = None
+        self._sub_1000b150_literals: Optional[Dict[str, Set[str]]] = None
+        self._logged_spawn_entries_cache: Optional[Dict[str, Dict[str, object]]] = None
 
     # -- general helpers --
     def _resolve_binary_path(self) -> Optional[Path]:
@@ -269,6 +272,10 @@ class HLILParser:
             for classname, func in self._call_graph_spawn_entries().items():
                 if classname not in spawn_entries:
                     spawn_entries[classname] = func
+
+            for classname, entry in self._logged_spawn_entries().items():
+                if classname not in spawn_entries or spawn_entries[classname] == "SpawnItemFromItemlist":
+                    spawn_entries[classname] = entry["function"]
 
             self._spawn_map = spawn_entries
         return self._spawn_map
@@ -566,16 +573,73 @@ class HLILParser:
         return None
 
     def _spawn_entries_from_binary_tables(self) -> Dict[str, str]:
-        literal_map = self._string_literal_map()
         combined: Dict[str, str] = {}
-        for base in (0x10046928, 0x1004A5C0):
-            entries = self._parse_spawn_table_from_address(
-                base, entry_size=0x48, literal_map=literal_map
-            )
-            for classname, func in entries.items():
-                if classname not in combined:
-                    combined[classname] = func
+        for record in self._spawn_table_records():
+            classname = record.get("classname")
+            function = record.get("function")
+            if not classname or not function:
+                continue
+            if classname not in combined:
+                combined[classname] = function
         return combined
+
+    def _spawn_table_records(self) -> List[Dict[str, object]]:
+        if self._spawn_table_records_cache is not None:
+            return self._spawn_table_records_cache
+        records: List[Dict[str, object]] = []
+        if not self._load_binary_image() or self._binary_data is None:
+            self._spawn_table_records_cache = records
+            return records
+        base_address = 0x10046928
+        entry_size = 0x48
+        offset = self._va_to_file_offset(base_address)
+        if offset is None:
+            self._spawn_table_records_cache = records
+            return records
+        literal_map = self._string_literal_map()
+        data = self._binary_data
+        idx = 0
+        invalid_streak = 0
+        while offset + (idx + 1) * entry_size <= len(data):
+            start = offset + idx * entry_size
+            chunk = data[start : start + entry_size]
+            if len(chunk) < entry_size:
+                break
+            values = struct.unpack("<" + "I" * (entry_size // 4), chunk)
+            if not any(values):
+                invalid_streak += 1
+                if invalid_streak >= 64 and records:
+                    break
+                idx += 1
+                continue
+            invalid_streak = 0
+            name_ptr = values[0]
+            func_ptr = values[1]
+            text_ptr = values[0x28 // 4]
+            if not name_ptr or not func_ptr or not self._is_valid_function_address(func_ptr):
+                idx += 1
+                continue
+            classname = self._resolve_classname_from_pointer(name_ptr, literal_map)
+            if not classname:
+                classname = self._read_c_string(name_ptr)
+            if not classname:
+                idx += 1
+                continue
+            text_label = self._read_c_string(text_ptr) if text_ptr else None
+            record = {
+                "index": idx,
+                "address": base_address + idx * entry_size,
+                "classname": self._normalize_classname(classname),
+                "function": f"sub_{func_ptr:08x}",
+                "text_label": text_label,
+                "name_pointer": name_ptr,
+                "text_pointer": text_ptr,
+                "function_pointer": func_ptr,
+            }
+            records.append(record)
+            idx += 1
+        self._spawn_table_records_cache = records
+        return records
 
     def _extract_spawn_map_from_spawn_tables(
         self,
@@ -785,7 +849,7 @@ class HLILParser:
             if block:
                 info.defaults = self._extract_defaults(block, fields)
                 info.spawnflags = self._extract_spawnflags(block)
-            if not info.defaults and func == "SpawnItemFromItemlist":
+            if not info.defaults and classname in self._itemlist_entries():
                 item_defaults = self._itemlist_defaults_for(classname)
                 if item_defaults:
                     info.defaults = item_defaults
@@ -837,6 +901,70 @@ class HLILParser:
             field_name = f"offset_0x{offset:x}"
             defaults[field_name] = [{"offset": offset, "value": int(raw_value)}]
         return defaults
+
+    def _sub_1000b150_literal_sources(self) -> Dict[str, Set[str]]:
+        if self._sub_1000b150_literals is not None:
+            return self._sub_1000b150_literals
+        pattern = re.compile(r'sub_1000b150\("([^\"]+)"\)', re.IGNORECASE)
+        sources: Dict[str, Set[str]] = {}
+        root = self.path.parent
+        for source in self._sources:
+            try:
+                rel_path = str(source.path.relative_to(root))
+            except ValueError:
+                rel_path = str(source.path)
+            for line in source.lines:
+                for match in pattern.finditer(line):
+                    literal = match.group(1)
+                    sources.setdefault(literal, set()).add(rel_path)
+        self._sub_1000b150_literals = sources
+        return sources
+
+    def _logged_spawn_entries(self) -> Dict[str, Dict[str, object]]:
+        if self._logged_spawn_entries_cache is not None:
+            return self._logged_spawn_entries_cache
+        literal_sources = self._sub_1000b150_literal_sources()
+        if not literal_sources:
+            self._logged_spawn_entries_cache = {}
+            return {}
+        text_map: Dict[str, Dict[str, object]] = {}
+        for record in self._spawn_table_records():
+            text_label = record.get("text_label")
+            if not text_label:
+                continue
+            text_map.setdefault(text_label.lower(), record)
+        entries: Dict[str, Dict[str, object]] = {}
+        for literal, source_paths in literal_sources.items():
+            record = text_map.get(literal.lower())
+            if not record:
+                continue
+            classname = record.get("classname")
+            function = record.get("function")
+            if not classname or not function:
+                continue
+            entries[classname] = {
+                "classname": classname,
+                "function": function,
+                "index": record.get("index", -1),
+                "literal": literal,
+                "sources": sorted(source_paths),
+            }
+        self._logged_spawn_entries_cache = entries
+        return entries
+
+    def sub_1000b150_logged_map(self) -> List[Dict[str, object]]:
+        entries = []
+        for record in self._logged_spawn_entries().values():
+            entries.append(
+                {
+                    "classname": record["classname"],
+                    "function": record["function"],
+                    "index": record["index"],
+                    "literal": record["literal"],
+                    "sources": record["sources"],
+                }
+            )
+        return sorted(entries, key=lambda entry: (entry["index"], entry["classname"]))
 
     def _extract_defaults(self, block: List[str], fields: Dict[int, FieldInfo]) -> Dict[str, List[Dict[str, object]]]:
         results: Dict[str, List[Dict[str, object]]] = {}
@@ -1352,6 +1480,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--output", type=Path, help="Write combined manifest JSON to this path")
     parser.add_argument("--comparison", type=Path, help="Write comparison JSON to this path")
     parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON when writing to stdout")
+    parser.add_argument(
+        "--dump-b150-map",
+        type=Path,
+        help="Write the interpreted sub_1000b150 literal-to-classname map to this path",
+    )
     args = parser.parse_args(argv)
 
     hlil_parser = HLILParser(args.hlil)
@@ -1360,6 +1493,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     hlil_manifest = hlil_parser.build_manifest()
     repo_manifest = repo_parser.build_manifest()
     comparison = compare_manifests(hlil_manifest, repo_manifest)
+
+    if args.dump_b150_map:
+        args.dump_b150_map.write_text(
+            json.dumps(hlil_parser.sub_1000b150_logged_map(), indent=2, sort_keys=True)
+        )
 
     combined = {
         "hlil": {
