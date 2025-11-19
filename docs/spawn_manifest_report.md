@@ -54,7 +54,7 @@ bits compared to the binary:
 | `func_clock`       | No recorded spawnflag checks | Checks bits 1, 2, and 4 (start stopped, toggle, reverse) |
 | `func_door`        | Clears bit 0 (forces re-open) on load | Only checks bits 1, 16, and 64, never clears bit 0 |
 | `func_water`       | No spawnflag interaction detected | Checks flags and masks in modern code |
-| `misc_actor`       | No spawnflag logic extracted | Repo toggles cinematic and start-on flags |
+| `misc_actor`       | Sets the hidden 0x20 START_ON bit when auto-filling `targetname` and still checks corpse/wimpy bits | Repo already toggles those flags; manifest now records the authentic writes |
 | `target_actor`     | HLIL leaves spawnflags untouched | Repo checks/clears bits 1 and 2 |
 
 (See `docs/manifests/spawn_manifest_comparison.json` under

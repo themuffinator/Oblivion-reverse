@@ -1191,6 +1191,11 @@ static qboolean Actor_SpawnOblivion(edict_t *self)
 
 	if (!self->targetname)
 	{
+		/*
+		 * The HLIL spawn routine (sub_1001f460) injects "Yo Mama" and sets
+		 * the hidden START_ON bit so mission controllers can always address
+		 * the actor even when the mapper omitted a targetname.
+		 */
 		self->targetname = (char *)kDefaultTargetName;
 		self->spawnflags |= ACTOR_SPAWNFLAG_START_ON;
 	}

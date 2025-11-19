@@ -738,40 +738,78 @@ class HLILParser:
         sets: List[int] = []
         clears: List[int] = []
         assignments: List[int] = []
+        alias_pattern = re.compile(
+            r"^\s*(?:[0-9a-f]+:)?[0-9a-f]*\s*(?:[a-z_][a-z0-9_\s\*]*\s+)?([a-z_][a-z0-9_]*)\s*=\s*"
+            r"\(?\*[^)]*0x11c[^)]*\)?(?:\.[a-z0-9_]+)?",
+            re.IGNORECASE,
+        )
+        alias_names: Set[str] = set()
         for line in block:
-            if "0x11c" not in line:
+            if "0x11c" in line:
+                for match in alias_pattern.finditer(line):
+                    alias_names.add(match.group(1))
+                # direct assignment
+                m_assign = re.search(r"\*\([^)]*0x11c\)\s*=\s*(0x[0-9a-f]+|\d+)", line, re.IGNORECASE)
+                if m_assign:
+                    assignments.append(int(m_assign.group(1), 0))
+                # |= sets
+                for m in re.finditer(r"\*\([^)]*0x11c[^)]*\)\s*\|=\s*(0x[0-9a-f]+|\d+)", line, re.IGNORECASE):
+                    value = int(m.group(1), 0)
+                    if value not in sets:
+                        sets.append(value)
+                # &= clears via mask
+                for m in re.finditer(r"\*\([^)]*0x11c[^)]*\)\s*&=\s*(0x[0-9a-f]+|\d+)", line, re.IGNORECASE):
+                    mask = int(m.group(1), 0) & 0xFFFFFFFF
+                    cleared = (~mask) & 0xFFFFFFFF
+                    if 0 < cleared < 0xFFFFFFFF and cleared not in clears:
+                        clears.append(cleared)
+                # explicit masked assignment clears
+                m_clear = re.search(
+                    r"\*\([^)]*0x11c\)\s*=\s*\*\([^)]*0x11c\)\s*&\s*(0x[0-9a-f]+|\d+)",
+                    line,
+                    re.IGNORECASE,
+                )
+                if m_clear:
+                    mask = int(m_clear.group(1), 0) & 0xFFFFFFFF
+                    cleared = (~mask) & 0xFFFFFFFF
+                    if 0 < cleared < 0xFFFFFFFF and cleared not in clears:
+                        clears.append(cleared)
+                # remaining & occurrences referencing the field are treated as checks
+                for m in re.finditer(
+                    r"\([^)]*0x11c[^)]*\)\s*&\s*(0x[0-9a-f]+|\d+)",
+                    line,
+                    re.IGNORECASE,
+                ):
+                    value = int(m.group(1), 0)
+                    if value not in checks:
+                        checks.append(value)
+            if not alias_names:
                 continue
-            # direct assignment
-            m_assign = re.search(r"\*\([^)]*0x11c\)\s*=\s*(0x[0-9a-f]+|\d+)", line, re.IGNORECASE)
-            if m_assign:
-                assignments.append(int(m_assign.group(1), 0))
-            # |= sets
-            for m in re.finditer(r"\|=\s*(0x[0-9a-f]+|\d+)", line, re.IGNORECASE):
-                value = int(m.group(1), 0)
-                if value not in sets:
-                    sets.append(value)
-            # &= clears via mask
-            for m in re.finditer(r"&=\s*(0x[0-9a-f]+|\d+)", line, re.IGNORECASE):
-                mask = int(m.group(1), 0) & 0xFFFFFFFF
-                cleared = (~mask) & 0xFFFFFFFF
-                if 0 < cleared < 0xFFFFFFFF and cleared not in clears:
-                    clears.append(cleared)
-            # explicit masked assignment clears
-            m_clear = re.search(
-                r"\*\([^)]*0x11c\)\s*=\s*\*\([^)]*0x11c\)\s*&\s*(0x[0-9a-f]+|\d+)",
-                line,
-                re.IGNORECASE,
-            )
-            if m_clear:
-                mask = int(m_clear.group(1), 0) & 0xFFFFFFFF
-                cleared = (~mask) & 0xFFFFFFFF
-                if 0 < cleared < 0xFFFFFFFF and cleared not in clears:
-                    clears.append(cleared)
-            # remaining & occurrences are treated as checks
-            for m in re.finditer(r"\([^)]*0x11c[^)]*\)\s*&\s*(0x[0-9a-f]+|\d+)", line, re.IGNORECASE):
-                value = int(m.group(1), 0)
-                if value not in checks:
-                    checks.append(value)
+            for alias in alias_names:
+                escaped = re.escape(alias)
+                set_pattern = re.compile(
+                    rf"{escaped}(?:\.b)?\s*\|=\s*(0x[0-9a-f]+|\d+)", re.IGNORECASE
+                )
+                for m in set_pattern.finditer(line):
+                    value = int(m.group(1), 0)
+                    if value not in sets:
+                        sets.append(value)
+                clear_pattern = re.compile(
+                    rf"{escaped}(?:\.b)?\s*&=\s*(0x[0-9a-f]+|\d+)", re.IGNORECASE
+                )
+                for m in clear_pattern.finditer(line):
+                    mask = int(m.group(1), 0) & 0xFFFFFFFF
+                    cleared = (~mask) & 0xFFFFFFFF
+                    if 0 < cleared < 0xFFFFFFFF and cleared not in clears:
+                        clears.append(cleared)
+                check_pattern = re.compile(
+                    rf"{escaped}(?:\.b)?\s*&\s*(?!\=)(0x[0-9a-f]+|\d+)",
+                    re.IGNORECASE,
+                )
+                for m in check_pattern.finditer(line):
+                    value = int(m.group(1), 0)
+                    if value not in checks:
+                        checks.append(value)
         return {
             "checks": sorted(checks),
             "sets": sorted(sets),
