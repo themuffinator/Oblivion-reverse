@@ -7,6 +7,7 @@ import argparse
 import ast
 import json
 import math
+import os
 import re
 import struct
 import sys
@@ -794,10 +795,24 @@ class MacroResolver:
                     if name not in self.definitions:
                         self.definitions[name] = expr.strip()
         self._cache: Dict[str, int] = {}
+        self._overrides: Dict[str, str] = {
+            key: value.strip()
+            for key, value in os.environ.items()
+            if key.startswith("OBLIVION_") and value.strip()
+        }
 
     def evaluate(self, name: str) -> Optional[int]:
         if name in self._cache:
             return self._cache[name]
+        override = self._overrides.get(name)
+        if override is not None:
+            try:
+                value = self._eval_expr(override)
+            except Exception:
+                value = None
+            if value is not None:
+                self._cache[name] = value
+                return value
         expr = self.definitions.get(name)
         if expr is None:
             return None
@@ -884,6 +899,9 @@ class RepoParser:
         rotate_flag = self.macro_resolver.evaluate("OBLIVION_ENABLE_ROTATE_TRAIN")
         if rotate_flag is not None and rotate_flag == 0:
             spawn_map.pop("func_rotate_train", None)
+        sentinel_flag = self.macro_resolver.evaluate("OBLIVION_ENABLE_MONSTER_SENTINEL")
+        if sentinel_flag is not None and sentinel_flag == 0:
+            spawn_map.pop("monster_sentinel", None)
         return spawn_map
 
     def _parse_itemlist_classnames(self) -> Set[str]:

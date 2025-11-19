@@ -8,6 +8,8 @@
 
 #include "g_local.h"
 
+#if OBLIVION_ENABLE_MONSTER_SENTINEL
+
 #define MODEL_SCALE         1.000000f
 
 #define SENTINEL_FRAME_STAND_START       0
@@ -285,5 +287,7 @@ void SP_monster_sentinel (edict_t *self)
 
         gi.linkentity (self);
 
-        walkmonster_start (self);
+walkmonster_start (self);
 }
+
+#endif // OBLIVION_ENABLE_MONSTER_SENTINEL

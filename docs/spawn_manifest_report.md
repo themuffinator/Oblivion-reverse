@@ -39,8 +39,10 @@ loading.
 ## Entities only present in the repo
 
 `monster_sentinel` is implemented in the modern codebase but does not surface in
-the retail `gamex86.dll` spawn table, which suggests it was added post-release
-or is specific to Oblivion’s fork. 【F:docs/manifests/spawn_manifest_comparison.json†L60-L63】
+the retail `gamex86.dll` spawn table, which confirms it is an Oblivion-only
+addition. 【F:docs/manifests/spawn_manifest_comparison.json†L60-L63】 The new
+`OBLIVION_ENABLE_MONSTER_SENTINEL` build flag guards its spawn registration so
+parity-focused builds can disable the feature without triggering manifest diffs.
 Documenting that divergence in monster reference material will help level
 authors understand which assets are custom to this project.
 
@@ -100,8 +102,9 @@ alter startup timing and AI reliability.
    inline comments or doc updates summarizing any remaining differences.
    【F:docs/manifests/spawn_manifest_comparison.json†L74-L183】
 4. **Document custom-only assets.** Flag entities like `monster_sentinel` as
-   Oblivion-specific in design docs to avoid confusion when porting retail
-   maps. 【F:docs/manifests/spawn_manifest_comparison.json†L60-L63】
+   Oblivion-specific in design docs (noting the
+   `OBLIVION_ENABLE_MONSTER_SENTINEL` toggle) to avoid confusion when porting
+   retail maps. 【F:docs/manifests/spawn_manifest_comparison.json†L60-L63】
 
 With the snapshot test in place, future engine tweaks that touch spawn logic
 must update the manifest, ensuring drift stays visible.

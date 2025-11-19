@@ -153,7 +153,9 @@ void SP_monster_soldier_deatom (edict_t *self);
 void SP_monster_cyborg (edict_t *self);
 void SP_monster_kigrax (edict_t *self);
 void SP_monster_spider (edict_t *self);
+#if OBLIVION_ENABLE_MONSTER_SENTINEL
 void SP_monster_sentinel (edict_t *self);
+#endif
 void SP_monster_tank (edict_t *self);
 void SP_monster_medic (edict_t *self);
 void SP_monster_flipper (edict_t *self);
@@ -290,8 +292,10 @@ spawn_t	spawns[] = {
         {"monster_cyborg", SP_monster_cyborg},
         {"monster_kigrax", SP_monster_kigrax},
         {"monster_spider", SP_monster_spider},
+#if OBLIVION_ENABLE_MONSTER_SENTINEL
         {"monster_sentinel", SP_monster_sentinel},
-    {"monster_tank", SP_monster_tank},
+#endif
+        {"monster_tank", SP_monster_tank},
 	{"monster_tank_commander", SP_monster_tank},
 	{"monster_medic", SP_monster_medic},
 	{"monster_flipper", SP_monster_flipper},
