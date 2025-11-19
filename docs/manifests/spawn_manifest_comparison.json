@@ -6539,14 +6539,6 @@
         ]
       ]
     },
-    "target_actor": {
-      "checks": [
-        [],
-        [
-          1
-        ]
-      ]
-    },
     "target_speaker": {
       "checks": [
         [],

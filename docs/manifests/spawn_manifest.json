@@ -6221,9 +6221,7 @@
       }
     },
     "item_health": {
-      "defaults": {
-        "count": 10.0
-      },
+      "defaults": {},
       "function": "SP_item_health",
       "spawnflags": {
         "assignments": [],
@@ -7147,15 +7145,11 @@
       }
     },
     "target_actor": {
-      "defaults": {
-        "speed": 200.0
-      },
+      "defaults": {},
       "function": "SP_target_actor",
       "spawnflags": {
         "assignments": [],
-        "checks": [
-          1
-        ],
+        "checks": [],
         "clears": [],
         "sets": []
       }
