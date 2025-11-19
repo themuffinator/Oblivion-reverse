@@ -168,6 +168,7 @@ void SP_monster_supertank (edict_t *self);
 void SP_monster_boss2 (edict_t *self);
 void SP_monster_jorg (edict_t *self);
 void SP_monster_boss3_stand (edict_t *self);
+void SP_monster_makron (edict_t *self);
 
 void SP_monster_commander_body (edict_t *self);
 
@@ -300,14 +301,15 @@ spawn_t	spawns[] = {
 	{"monster_flyer", SP_monster_flyer},
 	{"monster_brain", SP_monster_brain},
 	{"monster_floater", SP_monster_floater},
-	{"monster_hover", SP_monster_hover},
-	{"monster_mutant", SP_monster_mutant},
-	{"monster_supertank", SP_monster_supertank},
-	{"monster_boss2", SP_monster_boss2},
-	{"monster_boss3_stand", SP_monster_boss3_stand},
-	{"monster_jorg", SP_monster_jorg},
+{"monster_hover", SP_monster_hover},
+{"monster_mutant", SP_monster_mutant},
+{"monster_supertank", SP_monster_supertank},
+{"monster_boss2", SP_monster_boss2},
+{"monster_boss3_stand", SP_monster_boss3_stand},
+{"monster_makron", SP_monster_makron},
+{"monster_jorg", SP_monster_jorg},
 
-	{"monster_commander_body", SP_monster_commander_body},
+{"monster_commander_body", SP_monster_commander_body},
 
 	{"turret_breach", SP_turret_breach},
 	{"turret_base", SP_turret_base},
