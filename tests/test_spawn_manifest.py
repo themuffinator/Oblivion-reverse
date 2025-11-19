@@ -44,6 +44,23 @@ class SpawnManifestSnapshotTest(unittest.TestCase):
             "SpawnItemFromItemlist",
             "weapon_rtdu HLIL manifest entry does not match expected function",
         )
+        repo_manifest = current.get("combined", {}).get("repo", {})
+        self.assertIn(
+            "monster_makron",
+            repo_manifest,
+            "Expected monster_makron entry missing from repo manifest",
+        )
+        self.assertEqual(
+            repo_manifest["monster_makron"].get("function"),
+            "SP_monster_makron",
+            "monster_makron repo manifest entry does not match expected function",
+        )
+        missing_in_repo = current.get("comparison", {}).get("missing_in_repo", [])
+        self.assertNotIn(
+            "monster_makron",
+            missing_in_repo,
+            "monster_makron should be spawnable by maps but is still reported missing",
+        )
         self.assertEqual(current, expected)
 
 

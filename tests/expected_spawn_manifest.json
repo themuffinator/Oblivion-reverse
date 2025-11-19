@@ -6994,6 +6994,20 @@
           "sets": []
         }
       },
+      "monster_makron": {
+        "defaults": {
+          "gib_health": -2000.0,
+          "health": 3000.0,
+          "mass": 500.0
+        },
+        "function": "SP_monster_makron",
+        "spawnflags": {
+          "assignments": [],
+          "checks": [],
+          "clears": [],
+          "sets": []
+        }
+      },
       "monster_medic": {
         "defaults": {
           "gib_health": -130.0,
@@ -10163,6 +10177,44 @@
             {
               "offset": 248,
               "value": 5
+            }
+          ],
+          null
+        ]
+      },
+      "monster_makron": {
+        "offset_0x12c": [
+          [
+            {
+              "offset": 300,
+              "value": 0
+            }
+          ],
+          null
+        ],
+        "offset_0x140": [
+          [
+            {
+              "offset": 320,
+              "value": 0
+            }
+          ],
+          null
+        ],
+        "offset_0x2c4": [
+          [
+            {
+              "offset": 708,
+              "value": 128
+            }
+          ],
+          null
+        ],
+        "offset_0x390": [
+          [
+            {
+              "offset": 912,
+              "value": 0
             }
           ],
           null
@@ -14140,8 +14192,7 @@
       "%s/listip.cfg",
       "detpack",
       "grenade",
-      "mine",
-      "monster_makron"
+      "mine"
     ],
     "spawnflag_mismatches": {
       "func_clock": {
