@@ -11,7 +11,13 @@ Purpose: track the work required to bring the reconstructed Oblivion game DLL to
 ## Work plan (ordered and task-oriented)
 - [x] **Draft and check in the parity plan** – Capture the current audit state and ordered milestones in this document.
 - [ ] **Rebuild spawn table parity**
-  - [ ] Enumerate all missing `SP_` entries from the HLIL manifest and map each to source file locations.
+  - [x] Enumerate all missing `SP_` entries from the HLIL manifest and map each to source file locations.
+    - Missing HLIL entries and likely homes:
+      - `%s/listip.cfg` – Not a real spawn; this string comes from the server IP persistence helper in `g_svcmds.c` and should be excluded from spawn reconciliation work.【F:docs/manifests/spawn_manifest_comparison.json†L11536-L11542】【F:src/game/g_svcmds.c†L233-L271】
+      - `detpack` – HLIL lists a spawner stub, but the only coverage in-source is the thrown detpack projectile logic in `g_weapon.c` (class `"detpack"`). A future spawner should likely wire into that implementation or add a map-placed variant near the existing detpack helpers.【F:docs/manifests/spawn_manifest_comparison.json†L11536-L11542】【F:src/game/g_weapon.c†L1383-L1542】
+      - `grenade` – The HLIL manifest includes a standalone `grenade` spawner. The repo only instantiates grenades through the weapon code paths (`fire_grenade`/`fire_grenade2`), so `g_weapon.c` is the right anchor for adding an `SP_` hook if retail maps expect one.【F:docs/manifests/spawn_manifest_comparison.json†L11536-L11542】【F:src/game/g_weapon.c†L532-L567】
+      - `mine` – The manifest exposes a `mine` classname. The closest match in the repo is the proximity mine projectile (`fire_proximity_mine`, classname `"prox_mine"`) in `g_weapon.c`; parity likely needs a spawner that aliases to or adjusts that logic.【F:docs/manifests/spawn_manifest_comparison.json†L11536-L11542】【F:src/game/g_weapon.c†L1573-L1667】
+      - `j` – HLIL points to `sub_10001350` without a mapped classname in the repo. The decompiled block manipulates entity fields at offsets 0x35c/0x370/0x3c0, so we still need to locate or reconstruct the corresponding game-side function before adding a spawn entry.【F:docs/manifests/spawn_manifest_comparison.json†L11536-L11542】【F:references/HLIL/oblivion/split/types/gamex86.dll_hlil_type_00006_block.txt†L188-L230】
   - [ ] Implement stubs or full spawners for retail items, weapons, keys, triggers, and targets in `g_spawn.c`.
   - [ ] Regenerate spawn manifests and compare against `spawn_manifest_comparison.json` to confirm coverage.
   - [ ] Add regression tests that fail if future spawner omissions reappear.
@@ -35,4 +41,4 @@ Purpose: track the work required to bring the reconstructed Oblivion game DLL to
   - [ ] Capture parity evidence via manifest diffs and (when possible) demo playback.
   - [ ] Log remaining gaps and backfill earlier milestones as needed.
 
-**Next action when working the plan:** begin the "Rebuild spawn table parity" milestone by enumerating missing `SP_` entries and mapping them to source files.
+**Next action when working the plan:** begin wiring the missing `SP_` entries (starting with `detpack`, `grenade`, and `mine`) into `g_spawn.c` and the weapon helpers noted above.
