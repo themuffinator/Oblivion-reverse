@@ -17,6 +17,10 @@
 #define SPIDER_FRAME_ATTACKB_END	0x50
 #define SPIDER_FRAME_RUN_START		0x51
 #define SPIDER_FRAME_RUN_END		0x55
+#define SPIDER_FRAME_COMBO_PRIMARY_START	0x56
+#define SPIDER_FRAME_COMBO_PRIMARY_END		0x58
+#define SPIDER_FRAME_COMBO_SECONDARY_START	0x59
+#define SPIDER_FRAME_COMBO_SECONDARY_END	0x5a
 #define SPIDER_FRAME_PAIN_START		0x5b
 #define SPIDER_FRAME_PAIN_END		0x62
 #define SPIDER_FRAME_ATTACK_FINISH_START	0x63
@@ -62,6 +66,8 @@ static void spider_run(edict_t *self);
 static void spider_attack(edict_t *self);
 static void spider_combo_entry(edict_t *self);
 static void spider_continue_combo(edict_t *self);
+static void spider_combo_primary_start(edict_t *self);
+static void spider_combo_secondary_start(edict_t *self);
 static void spider_begin_recover(edict_t *self);
 static void spider_attack_recover_end(edict_t *self);
 static void spider_clear_combo_state(edict_t *self);
@@ -187,6 +193,29 @@ static mmove_t spider_move_run = {
     SPIDER_FRAME_RUN_END,
     spider_frames_run,
     spider_select_locomotion
+};
+
+static mframe_t spider_frames_combo_primary_entry[] = {
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL}
+};
+static mmove_t spider_move_combo_primary_entry = {
+	SPIDER_FRAME_COMBO_PRIMARY_START,
+	SPIDER_FRAME_COMBO_PRIMARY_END,
+	spider_frames_combo_primary_entry,
+	spider_combo_primary_start
+};
+
+static mframe_t spider_frames_combo_secondary_entry[] = {
+	{ai_charge, 0, NULL},
+	{ai_charge, 0, NULL}
+};
+static mmove_t spider_move_combo_secondary_entry = {
+	SPIDER_FRAME_COMBO_SECONDARY_START,
+	SPIDER_FRAME_COMBO_SECONDARY_END,
+	spider_frames_combo_secondary_entry,
+	spider_combo_secondary_start
 };
 
 static mframe_t spider_frames_attack_primary[] = {
@@ -525,7 +554,7 @@ Entry point for walk requests; delegates to locomotion selection.
 */
 static void spider_walk(edict_t *self)
 {
-    spider_select_locomotion(self);
+	spider_select_locomotion(self);
 }
 
 /*
@@ -537,7 +566,7 @@ Entry point for run requests; delegates to locomotion selection.
 */
 static void spider_run(edict_t *self)
 {
-    spider_select_locomotion(self);
+	spider_select_locomotion(self);
 }
 
 /*
@@ -549,7 +578,31 @@ Request that the spider begin or continue a melee combo.
 */
 static void spider_attack(edict_t *self)
 {
-    spider_combo_entry(self);
+	spider_combo_entry(self);
+}
+
+/*
+=============
+spider_combo_primary_start
+
+Switch into the primary strike chain after the combo entry windup.
+=============
+*/
+static void spider_combo_primary_start(edict_t *self)
+{
+	self->monsterinfo.currentmove = &spider_move_attack_primary;
+}
+
+/*
+=============
+spider_combo_secondary_start
+
+Switch into the secondary strike chain after the combo entry windup.
+=============
+*/
+static void spider_combo_secondary_start(edict_t *self)
+{
+	self->monsterinfo.currentmove = &spider_move_attack_secondary;
 }
 
 /*
@@ -561,33 +614,33 @@ Start a melee combo using the alternating chain logic.
 */
 static void spider_combo_entry(edict_t *self)
 {
-    int next_chain;
+	int next_chain;
 
-    if (!self->enemy)
-    {
-	spider_stand(self);
-	return;
-    }
+	if (!self->enemy)
+	{
+		spider_stand(self);
+		return;
+	}
 
-    if (self->oblivion.spider_combo_stage != SPIDER_STAGE_NONE && spider_combo_window_active(self))
-    {
-	return;
-    }
+	if (self->oblivion.spider_combo_stage != SPIDER_STAGE_NONE && spider_combo_window_active(self))
+	{
+		return;
+	}
 
-    next_chain = self->oblivion.spider_combo_next;
-    self->oblivion.spider_combo_next ^= 1;
-    self->oblivion.spider_combo_last = next_chain;
-    self->oblivion.spider_combo_stage = SPIDER_STAGE_FIRST;
-    spider_set_combo_window(self, SPIDER_COMBO_FIRST_WINDOW);
+	next_chain = self->oblivion.spider_combo_next;
+	self->oblivion.spider_combo_next ^= 1;
+	self->oblivion.spider_combo_last = next_chain;
+	self->oblivion.spider_combo_stage = SPIDER_STAGE_FIRST;
+	spider_set_combo_window(self, SPIDER_COMBO_FIRST_WINDOW);
 
-    if (next_chain == SPIDER_CHAIN_PRIMARY)
-    {
-	self->monsterinfo.currentmove = &spider_move_attack_primary;
-    }
-    else
-    {
-	self->monsterinfo.currentmove = &spider_move_attack_secondary;
-    }
+	if (next_chain == SPIDER_CHAIN_PRIMARY)
+	{
+		self->monsterinfo.currentmove = &spider_move_combo_primary_entry;
+	}
+	else
+	{
+		self->monsterinfo.currentmove = &spider_move_combo_secondary_entry;
+	}
 }
 
 /*
@@ -599,40 +652,40 @@ Advance through the chained melee sequences while the window is open.
 */
 static void spider_continue_combo(edict_t *self)
 {
-    if (!self->enemy || range(self, self->enemy) > RANGE_MELEE)
-    {
-	spider_begin_recover(self);
-	return;
-    }
-
-    if (!spider_combo_window_active(self))
-    {
-	spider_begin_recover(self);
-	return;
-    }
-
-    if (self->oblivion.spider_combo_stage == SPIDER_STAGE_FIRST)
-    {
-	int follow_up = (self->oblivion.spider_combo_last == SPIDER_CHAIN_PRIMARY) ? SPIDER_CHAIN_SECONDARY : SPIDER_CHAIN_PRIMARY;
-
-	self->oblivion.spider_combo_last = follow_up;
-	self->oblivion.spider_combo_stage = SPIDER_STAGE_SECOND;
-	spider_set_combo_window(self, SPIDER_COMBO_CHAIN_WINDOW);
-
-	if (follow_up == SPIDER_CHAIN_PRIMARY)
+	if (!self->enemy || range(self, self->enemy) > RANGE_MELEE)
 	{
-	    self->monsterinfo.currentmove = &spider_move_attack_primary;
+		spider_begin_recover(self);
+		return;
 	}
-	else
-	{
-	    self->monsterinfo.currentmove = &spider_move_attack_secondary;
-	}
-	return;
-    }
 
-    self->oblivion.spider_combo_stage = SPIDER_STAGE_FINISH;
-    spider_set_combo_window(self, SPIDER_COMBO_FINISH_WINDOW);
-    self->monsterinfo.currentmove = &spider_move_attack_finisher;
+	if (!spider_combo_window_active(self))
+	{
+		spider_begin_recover(self);
+		return;
+	}
+
+	if (self->oblivion.spider_combo_stage == SPIDER_STAGE_FIRST)
+	{
+		int follow_up = (self->oblivion.spider_combo_last == SPIDER_CHAIN_PRIMARY) ? SPIDER_CHAIN_SECONDARY : SPIDER_CHAIN_PRIMARY;
+
+		self->oblivion.spider_combo_last = follow_up;
+		self->oblivion.spider_combo_stage = SPIDER_STAGE_SECOND;
+		spider_set_combo_window(self, SPIDER_COMBO_CHAIN_WINDOW);
+
+		if (follow_up == SPIDER_CHAIN_PRIMARY)
+		{
+			self->monsterinfo.currentmove = &spider_move_combo_primary_entry;
+		}
+		else
+		{
+			self->monsterinfo.currentmove = &spider_move_combo_secondary_entry;
+		}
+		return;
+	}
+
+	self->oblivion.spider_combo_stage = SPIDER_STAGE_FINISH;
+	spider_set_combo_window(self, SPIDER_COMBO_FINISH_WINDOW);
+	self->monsterinfo.currentmove = &spider_move_attack_finisher;
 }
 
 /*
