@@ -10,10 +10,10 @@
 
 #include "g_local.h"
 
-#define CYBORG_FRAME_STAND_START       0x7d
+#define CYBORG_FRAME_STAND_START       0x6c
 #define CYBORG_FRAME_STAND_END         0x7d
-#define CYBORG_FRAME_IDLE_START        0x7d
-#define CYBORG_FRAME_IDLE_END          0x7d
+#define CYBORG_FRAME_IDLE_START        0x52
+#define CYBORG_FRAME_IDLE_END          0x6b
 #define CYBORG_FRAME_WALK_START        0x12
 #define CYBORG_FRAME_WALK_END          0x17
 #define CYBORG_FRAME_RUN_START         0x4f
@@ -151,18 +151,66 @@ static void cyborg_wound_stand_ground (edict_t *self);
 static void cyborg_stand_ground_think (edict_t *self);
 static void cyborg_stand (edict_t *self);
 
-static mframe_t cyborg_frames_stand[] = {
-	{ai_stand, 0.0f, cyborg_stand_ground_think}
-};
-static mmove_t cyborg_move_stand = {
-	CYBORG_FRAME_STAND_START, CYBORG_FRAME_STAND_END, cyborg_frames_stand, NULL
-};
-
+/*
+ * These long-form idle and stand tables recreate the retail animation
+ * blocks recovered in the HLIL dump as data_100516a0 (idle sway) and
+ * data_10051730 (hold-ready), preserving the original 0x52–0x7d span
+ * instead of the earlier single-frame placeholders.
+ */
 static mframe_t cyborg_frames_idle[] = {
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
 	{ai_stand, 0.0f, NULL}
 };
 static mmove_t cyborg_move_idle = {
 	CYBORG_FRAME_IDLE_START, CYBORG_FRAME_IDLE_END, cyborg_frames_idle, cyborg_stand
+};
+
+static mframe_t cyborg_frames_stand[] = {
+	{ai_stand, 0.0f, cyborg_stand_ground_think},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL},
+	{ai_stand, 0.0f, NULL}
+};
+static mmove_t cyborg_move_stand = {
+	CYBORG_FRAME_STAND_START, CYBORG_FRAME_STAND_END, cyborg_frames_stand, cyborg_idle_loop
 };
 
 static mframe_t cyborg_frames_walk[] = {

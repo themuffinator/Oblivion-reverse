@@ -81,10 +81,10 @@ struct edict_s *controller;              // active mission / path controller
 
 	qboolean        spider_alt_idle;                // alternate idle loop for boss variant
 	qboolean        spider_staggered;               // pain stagger flag
+	float           spider_stagger_time;            // timer gate for stagger recovery
 	int                     spider_combo_next;              // next combo chain seed
 	int                     spider_combo_last;              // most recent combo chain
 	int                     spider_combo_stage;             // current combo stage
-	float           spider_combo_time;             // combo chaining timer
 	float           cyborg_pain_time;              // cooldown timer for cyborg pain reactions
 	int             cyborg_pain_slot;              // alternating pain sound selector
 } edict_oblivion_ext_t;
@@ -1241,6 +1241,8 @@ struct edict_s
 	int			spawnflags;
 
 	float		timestamp;
+	int			state_flags;
+	float			state_time;
 
 	float		angle;			// set in qe3, -1 = up, -2 = down
 	char		*target;
