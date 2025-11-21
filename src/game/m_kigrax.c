@@ -57,7 +57,8 @@ static void kigrax_idle_select (edict_t *self);
 static void kigrax_walk_select (edict_t *self);
 static void kigrax_run_select (edict_t *self);
 static void kigrax_attack_execute (edict_t *self);
-static void kigrax_fire (edict_t *self);
+static void kigrax_fire_shot (edict_t *self, int shot_index);
+static void kigrax_attack_burst (edict_t *self);
 static void kigrax_attack_cleanup (edict_t *self);
 static void kigrax_set_attack_hull (edict_t *self, qboolean crouched);
 static void kigrax_begin_pain_stagger (edict_t *self);
@@ -151,48 +152,46 @@ machine can reuse the original animation layout.
 static void kigrax_init_moves (void)
 {
 	size_t i;
-
+	
 	if (kigrax_moves_initialized)
 		return;
-
+	
 	for (i = 0; i < ARRAY_LEN(kigrax_frames_hover); i++)
 		kigrax_frames_hover[i] = (mframe_t){ai_stand, 0.0f, NULL};
-
+	
 	for (i = 0; i < ARRAY_LEN(kigrax_frames_scan); i++)
 		kigrax_frames_scan[i] = (mframe_t){ai_stand, 0.0f, NULL};
-
+	
 	for (i = 0; i < ARRAY_LEN(kigrax_frames_patrol_ccw); i++)
 		kigrax_frames_patrol_ccw[i] = (mframe_t){ai_walk, 4.0f, NULL};
-
+	
 	for (i = 0; i < ARRAY_LEN(kigrax_frames_patrol_cw); i++)
 		kigrax_frames_patrol_cw[i] = (mframe_t){ai_walk, 4.0f, NULL};
-
+	
 	for (i = 0; i < ARRAY_LEN(kigrax_frames_strafe_long); i++)
 		kigrax_frames_strafe_long[i] = (mframe_t){ai_run, 10.0f, NULL};
-
+	
 	for (i = 0; i < ARRAY_LEN(kigrax_frames_strafe_dash); i++)
 		kigrax_frames_strafe_dash[i] = (mframe_t){ai_run, 15.0f, NULL};
-
+	
 	for (i = 0; i < ARRAY_LEN(kigrax_frames_attack_prep); i++)
 		kigrax_frames_attack_prep[i] = (mframe_t){ai_move, 0.0f, NULL};
-
+	
 	for (i = 0; i < ARRAY_LEN(kigrax_frames_attack); i++)
-		kigrax_frames_attack[i] = (mframe_t){ai_move, 0.0f, NULL};
-
-	kigrax_frames_attack[KIGRAX_FRAME_ATTACK_FIRE - KIGRAX_FRAME_ATTACK_START].thinkfunc = kigrax_fire;
-
+	kigrax_frames_attack[i] = (mframe_t){ai_move, 0.0f, kigrax_attack_burst};
+	
 	for (i = 0; i < ARRAY_LEN(kigrax_frames_pain); i++)
 		kigrax_frames_pain[i] = (mframe_t){ai_move, 0.0f, NULL};
-
+	
 	kigrax_frames_pain[0].thinkfunc = kigrax_begin_pain_stagger;
 	kigrax_frames_pain[ARRAY_LEN(kigrax_frames_pain) - 1].thinkfunc = kigrax_finish_pain_stagger;
-
+	
 	for (i = 0; i < ARRAY_LEN(kigrax_frames_death); i++)
 		kigrax_frames_death[i] = (mframe_t){ai_move, 0.0f, NULL};
-
+	
 	kigrax_frames_death[3].thinkfunc = kigrax_spawn_debris;
 	kigrax_frames_death[10].thinkfunc = kigrax_spawn_debris;
-
+	
 	kigrax_moves_initialized = true;
 }
 
@@ -341,44 +340,61 @@ static void kigrax_set_attack_hull (edict_t *self, qboolean crouched)
 
 /*
 =============
-kigrax_fire
+kigrax_fire_shot
 
-Fire the Kigrax four-shot salvo from the HLIL muzzle offset while the crouched
-attack hull is active.
+Fire a single Kigrax salvo projectile from the HLIL muzzle offset using the
+indexed yaw/pitch offsets.
 =============
 */
-static void kigrax_fire (edict_t *self)
+static void kigrax_fire_shot (edict_t *self, int shot_index)
 {
-	vec3_t start, dir, forward, right, target, aim_angles;
-	int i;
-
+	vec3_t start, dir, forward, right, target, aim_angles, shot_angles, shot_dir;
+	
 	if (!self->enemy)
 		return;
-
-	kigrax_set_attack_hull (self, true);
+	
 	AngleVectors (self->s.angles, forward, right, NULL);
 	G_ProjectSource (self->s.origin, monster_flash_offset[MZ2_HOVER_BLASTER_1], forward, right, start);
-
+	
 	VectorCopy (self->enemy->s.origin, target);
 	target[2] += self->enemy->viewheight * 0.5f;
-
+	
 	VectorSubtract (target, start, dir);
 	VectorNormalize (dir);
 	vectoangles (dir, aim_angles);
+	
+	VectorCopy (aim_angles, shot_angles);
+	shot_angles[YAW] += kigrax_salvo_yaw_offsets[shot_index];
+	shot_angles[PITCH] += kigrax_salvo_pitch_offsets[shot_index];
+	shot_angles[ROLL] = 0.0f;
+	AngleVectors (shot_angles, shot_dir, NULL, NULL);
+	
+	if (shot_index == 0)
+		gi.sound (self, CHAN_WEAPON, sound_attack, 1.0f, ATTN_NORM, 0.0f);
+	
+	monster_fire_blaster (self, start, shot_dir, 8, 1000, MZ2_HOVER_BLASTER_1, EF_BLASTER);
+}
 
-	gi.sound (self, CHAN_WEAPON, sound_attack, 1.0f, ATTN_NORM, 0.0f);
-	for (i = 0; i < ARRAY_LEN(kigrax_salvo_yaw_offsets); i++)
-	{
-		vec3_t shot_angles, shot_dir;
+/*
+=============
+kigrax_attack_burst
 
-		VectorCopy (aim_angles, shot_angles);
-		shot_angles[YAW] += kigrax_salvo_yaw_offsets[i];
-		shot_angles[PITCH] += kigrax_salvo_pitch_offsets[i];
-		shot_angles[ROLL] = 0.0f;
-		AngleVectors (shot_angles, shot_dir, NULL, NULL);
-
-		monster_fire_blaster (self, start, shot_dir, 8, 1000, MZ2_HOVER_BLASTER_1, EF_BLASTER);
-	}
+Mirror the HLIL attack controller at 0x1002f030 by shrinking the Kigrax hull
+for the full salvo window, staggering four blaster shots across the 19-frame
+burst, and allowing the mmove end handler to restore the patrol dispatchers.
+=============
+*/
+static void kigrax_attack_burst (edict_t *self)
+{
+	int frame_offset, shot_index;
+	
+	frame_offset = self->s.frame - KIGRAX_FRAME_ATTACK_START;
+	
+	kigrax_set_attack_hull (self, true);
+	
+	shot_index = frame_offset / 5;
+	if (frame_offset % 5 == 0 && shot_index < ARRAY_LEN(kigrax_salvo_yaw_offsets))
+		kigrax_fire_shot (self, shot_index);
 }
 
 /*
