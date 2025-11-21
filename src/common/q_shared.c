@@ -1039,27 +1039,31 @@ void Swap_Init (void)
 
 
 /*
-============
+=============
 va
 
 does a varargs printf into a temp buffer, so I don't need to have
-varargs versions of all text functions.
-FIXME: make this buffer size safe someday
-============
+varargs versions of all text functions. Uses a shared 1024-byte buffer
+and truncates to keep writes bounded.
+=============
 */
 char	*va(char *format, ...)
 {
 	va_list		argptr;
-	static char		string[1024];
-	
+	static char		 string[1024];
+	int			len;
+
 	va_start (argptr, format);
-	vsprintf (string, format,argptr);
+	len = vsnprintf (string, sizeof(string), format,argptr);
 	va_end (argptr);
 
-	return string;	
+	if (len < 0 || len >= (int)sizeof(string))
+	{
+		string[sizeof(string) - 1] = '\0';
+	}
+
+	return string;
 }
-
-
 char	com_token[MAX_TOKEN_CHARS];
 
 /*
