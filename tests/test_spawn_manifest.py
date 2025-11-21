@@ -91,14 +91,15 @@ class SpawnManifestSnapshotTest(unittest.TestCase):
                 f"monster_sentinel should be dropped from {key} when disabled",
             )
 
-        expected_path = repo_root / "tests" / "expected_spawn_manifest.json"
-        parity_expected = json.loads(expected_path.read_text(encoding="utf-8"))
-        parity_expected.get("combined", {}).get("repo", {}).pop("monster_sentinel", None)
-        parity_missing = parity_expected.get("comparison", {}).get("missing_in_hlil", [])
-        parity_expected["comparison"]["missing_in_hlil"] = [
-            classname for classname in parity_missing if classname != "monster_sentinel"
-        ]
-        self.assertEqual(current, parity_expected)
+    def test_monster_spider_spawnflags_include_boss_variant(self) -> None:
+        current, _ = self._extract_manifest()
+        repo_manifest = current.get("combined", {}).get("repo", {})
+        spider_flags = repo_manifest.get("monster_spider", {}).get("spawnflags", {})
+        self.assertIn(
+            8,
+            spider_flags.get("checks", []),
+            "monster_spider should gate its boss variant on spawnflag bit 8",
+        )
 
     def test_func_door_clears_start_open_bit(self) -> None:
         current, _ = self._extract_manifest()

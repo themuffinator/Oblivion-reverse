@@ -40,6 +40,9 @@
 #define SPIDER_COMBO_FINISH_WINDOW	0.5f
 #define SPIDER_COMBO_RECOVER_COOLDOWN	1.0f
 
+#define SPIDER_SPAWNFLAG_BOSS	(1 << 3)
+
+
 static int sound_sight;
 static int sound_search;
 static int sound_idle;
@@ -762,61 +765,61 @@ Spawn function for the Oblivion spider tank.
 */
 void SP_monster_spider(edict_t *self)
 {
-    if (deathmatch->value)
-    {
-	G_FreeEdict(self);
-	return;
-    }
+	if (deathmatch->value)
+	{
+		G_FreeEdict(self);
+		return;
+	}
 
-    self->s.modelindex = gi.modelindex("models/monsters/spider/tris.md2");
-    VectorSet(self->mins, -32.0f, -32.0f, -32.0f);
-    VectorSet(self->maxs, 32.0f, 32.0f, 32.0f);
-    self->movetype = MOVETYPE_STEP;
-    self->solid = SOLID_BBOX;
-    self->mass = 300;
-
-    sound_sight = gi.soundindex("spider/sight.wav");
-    sound_search = gi.soundindex("gladiator/gldsrch1.wav");
-    sound_idle = gi.soundindex("gladiator/gldidle1.wav");
-    sound_pain1 = gi.soundindex("gladiator/pain.wav");
-    sound_pain2 = gi.soundindex("gladiator/gldpain2.wav");
-    sound_death = gi.soundindex("mutant/thud1.wav");
-    sound_melee[0] = gi.soundindex("gladiator/melee1.wav");
-    sound_melee[1] = gi.soundindex("gladiator/melee2.wav");
-    sound_melee[2] = gi.soundindex("gladiator/melee3.wav");
-    sound_step = gi.soundindex("mutant/step3.wav");
-
-    self->s.sound = sound_idle;
-
-    self->health = 400;
-    self->gib_health = -120;
-
-    self->pain = spider_pain;
-    self->die = spider_die;
-
-    self->monsterinfo.stand = spider_stand;
-    self->monsterinfo.idle = spider_stand;
-    self->monsterinfo.walk = spider_walk;
-    self->monsterinfo.run = spider_run;
-    self->monsterinfo.attack = spider_attack;
-    self->monsterinfo.melee = spider_attack;
-    self->monsterinfo.sight = spider_sight;
-    self->monsterinfo.search = spider_search;
-
-    self->oblivion.spider_combo_next = SPIDER_CHAIN_PRIMARY;
-    spider_clear_combo_state(self);
-    spider_clear_stagger(self);
-    self->oblivion.spider_alt_idle = (self->spawnflags & 0x100) != 0;
-
-    if (self->oblivion.spider_alt_idle)
-    {
-	VectorSet(self->mins, -48.0f, -48.0f, -40.0f);
-	VectorSet(self->maxs, 48.0f, 48.0f, 48.0f);
+	self->s.modelindex = gi.modelindex("models/monsters/spider/tris.md2");
+	VectorSet(self->mins, -32.0f, -32.0f, -32.0f);
+	VectorSet(self->maxs, 32.0f, 32.0f, 32.0f);
 	self->movetype = MOVETYPE_STEP;
-	self->monsterinfo.idle = spider_boss_idle;
-    }
+	self->solid = SOLID_BBOX;
+	self->mass = 300;
 
-    spider_stand(self);
+	sound_sight = gi.soundindex("spider/sight.wav");
+	sound_search = gi.soundindex("gladiator/gldsrch1.wav");
+	sound_idle = gi.soundindex("gladiator/gldidle1.wav");
+	sound_pain1 = gi.soundindex("gladiator/pain.wav");
+	sound_pain2 = gi.soundindex("gladiator/gldpain2.wav");
+	sound_death = gi.soundindex("mutant/thud1.wav");
+	sound_melee[0] = gi.soundindex("gladiator/melee1.wav");
+	sound_melee[1] = gi.soundindex("gladiator/melee2.wav");
+	sound_melee[2] = gi.soundindex("gladiator/melee3.wav");
+	sound_step = gi.soundindex("mutant/step3.wav");
 
-    walkmonster_start(self);
+	self->s.sound = sound_idle;
+
+	self->health = 400;
+	self->gib_health = -120;
+
+	self->pain = spider_pain;
+	self->die = spider_die;
+
+	self->monsterinfo.stand = spider_stand;
+	self->monsterinfo.idle = spider_stand;
+	self->monsterinfo.walk = spider_walk;
+	self->monsterinfo.run = spider_run;
+	self->monsterinfo.attack = spider_attack;
+	self->monsterinfo.melee = spider_attack;
+	self->monsterinfo.sight = spider_sight;
+	self->monsterinfo.search = spider_search;
+
+	self->oblivion.spider_combo_next = SPIDER_CHAIN_PRIMARY;
+	spider_clear_combo_state(self);
+	spider_clear_stagger(self);
+	self->oblivion.spider_alt_idle = (self->spawnflags & SPIDER_SPAWNFLAG_BOSS) != 0;
+
+	if (self->oblivion.spider_alt_idle)
+	{
+		VectorSet(self->mins, -48.0f, -48.0f, -40.0f);
+		VectorSet(self->maxs, 48.0f, 48.0f, 48.0f);
+		self->movetype = MOVETYPE_TOSS;
+		self->monsterinfo.idle = spider_boss_idle;
+	}
+
+	spider_stand(self);
+
+	walkmonster_start(self);
 }
