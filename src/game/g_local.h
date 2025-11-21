@@ -81,6 +81,7 @@ struct edict_s *controller;              // active mission / path controller
 
 	qboolean        spider_alt_idle;                // alternate idle loop for boss variant
 	qboolean        spider_staggered;               // pain stagger flag
+	float           spider_stagger_time;            // timer gate for stagger recovery
 	int                     spider_combo_next;              // next combo chain seed
 	int                     spider_combo_last;              // most recent combo chain
 	int                     spider_combo_stage;             // current combo stage
