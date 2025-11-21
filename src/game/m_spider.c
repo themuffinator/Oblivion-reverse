@@ -495,8 +495,9 @@ Record that the spider is currently staggered by a pain reaction.
 */
 static void spider_mark_stagger(edict_t *self)
 {
-    self->oblivion.spider_staggered = true;
-    spider_clear_combo_state(self);
+	self->oblivion.spider_staggered = true;
+	self->oblivion.spider_stagger_time = self->pain_debounce_time;
+	spider_clear_combo_state(self);
 }
 
 /*
@@ -508,7 +509,26 @@ Clear the stagger flag so locomotion may resume.
 */
 static void spider_clear_stagger(edict_t *self)
 {
-    self->oblivion.spider_staggered = false;
+	self->oblivion.spider_staggered = false;
+	self->oblivion.spider_stagger_time = 0.0f;
+}
+
+/*
+=============
+spider_hold_stagger
+
+Pin the final pain frame until the stagger timer expires.
+=============
+*/
+static void spider_hold_stagger(edict_t *self)
+{
+	if (level.time < self->oblivion.spider_stagger_time)
+	{
+		self->monsterinfo.nextframe = self->s.frame;
+		return;
+	}
+
+	spider_clear_stagger(self);
 }
 
 /*
@@ -740,17 +760,17 @@ Handle stagger tracking, cooldown management, and pain animation entry.
 */
 static void spider_pain(edict_t *self, edict_t *other, float kick, int damage)
 {
-    int sound = (rand() & 1) ? sound_pain1 : sound_pain2;
+	int sound = (rand() & 1) ? sound_pain1 : sound_pain2;
 
-    if (level.time < self->pain_debounce_time)
-    {
-	return;
-    }
+	if (level.time < self->pain_debounce_time)
+	{
+		return;
+	}
 
-    self->pain_debounce_time = level.time + SPIDER_PAIN_DEBOUNCE;
-    gi.sound(self, CHAN_VOICE, sound, 1.0f, ATTN_NORM, 0.0f);
-    spider_mark_stagger(self);
-    self->monsterinfo.currentmove = &spider_move_pain;
+	self->pain_debounce_time = level.time + SPIDER_PAIN_DEBOUNCE;
+	gi.sound(self, CHAN_VOICE, sound, 1.0f, ATTN_NORM, 0.0f);
+	spider_mark_stagger(self);
+	self->monsterinfo.currentmove = &spider_move_pain;
 }
 
 /*
@@ -762,16 +782,21 @@ Clear the stagger flag and resume locomotion after a pain reaction.
 */
 static void spider_pain_recover(edict_t *self)
 {
-    spider_clear_stagger(self);
+	spider_hold_stagger(self);
 
-    if (self->monsterinfo.aiflags & AI_STAND_GROUND)
-    {
-	spider_stand(self);
-    }
-    else
-    {
-	spider_select_locomotion(self);
-    }
+	if (self->oblivion.spider_staggered)
+	{
+		return;
+	}
+
+	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
+	{
+		spider_stand(self);
+	}
+	else
+	{
+		spider_select_locomotion(self);
+	}
 }
 
 /*
