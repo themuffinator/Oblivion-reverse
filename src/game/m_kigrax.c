@@ -43,8 +43,29 @@ enum
 #define KIGRAX_PAIN_COOLDOWN	1.5f
 #define KIGRAX_SALVO_INTERVAL	(FRAMETIME)
 
+#define KIGRAX_FRAME_COUNT(start, end) ((end) - (start) + 1)
+
 static const float kigrax_salvo_yaw_offsets[] = {0.0f, -4.0f, 4.0f, 0.0f};
 static const float kigrax_salvo_pitch_offsets[] = {0.0f, -2.0f, -2.0f, 0.0f};
+
+static mframe_t kigrax_frames_hover[KIGRAX_FRAME_COUNT (KIGRAX_FRAME_IDLE_START, KIGRAX_FRAME_IDLE_END)];
+static mframe_t kigrax_frames_scan[KIGRAX_FRAME_COUNT (KIGRAX_FRAME_SCAN_START, KIGRAX_FRAME_SCAN_END)];
+static mframe_t kigrax_frames_patrol_ccw[KIGRAX_FRAME_COUNT (KIGRAX_FRAME_PATROL_CCW_START, KIGRAX_FRAME_PATROL_CCW_END)];
+static mframe_t kigrax_frames_patrol_cw[KIGRAX_FRAME_COUNT (KIGRAX_FRAME_PATROL_CW_START, KIGRAX_FRAME_PATROL_CW_END)];
+static mframe_t kigrax_frames_strafe_long[KIGRAX_FRAME_COUNT (KIGRAX_FRAME_STRAFE_LONG_START, KIGRAX_FRAME_STRAFE_LONG_END)];
+static mframe_t kigrax_frames_strafe_dash[KIGRAX_FRAME_COUNT (KIGRAX_FRAME_STRAFE_DASH_START, KIGRAX_FRAME_STRAFE_DASH_END)];
+static mframe_t kigrax_frames_attack_prep[KIGRAX_FRAME_COUNT (KIGRAX_FRAME_ATTACK_PREP_START, KIGRAX_FRAME_ATTACK_PREP_END)];
+static mframe_t kigrax_frames_attack[KIGRAX_FRAME_COUNT (KIGRAX_FRAME_ATTACK_START, KIGRAX_FRAME_ATTACK_END)];
+static mframe_t kigrax_frames_pain[KIGRAX_FRAME_COUNT (KIGRAX_FRAME_PAIN_START, KIGRAX_FRAME_PAIN_END)];
+static mframe_t kigrax_frames_death[KIGRAX_FRAME_COUNT (KIGRAX_FRAME_DEATH_START, KIGRAX_FRAME_DEATH_END)];
+
+static void kigrax_idle_select (edict_t *self);
+static void kigrax_walk_select (edict_t *self);
+static void kigrax_run_select (edict_t *self);
+static void kigrax_attack_execute (edict_t *self);
+static void kigrax_attack_salvo (edict_t *self);
+static void kigrax_end_pain (edict_t *self);
+static void kigrax_dead (edict_t *self);
 
 static const mframe_t kigrax_frames_pain_template[] = {
 	{ai_move, 0.0f, kigrax_begin_pain_stagger},
@@ -82,6 +103,124 @@ static const mframe_t kigrax_frames_death_template[] = {
 	{ai_move, 0.0f, NULL}
 };
 
+static mmove_t kigrax_move_hover = {
+	KIGRAX_FRAME_IDLE_START,
+	KIGRAX_FRAME_IDLE_END,
+	kigrax_frames_hover,
+	kigrax_idle_select
+};
+
+static mmove_t kigrax_move_scan = {
+	KIGRAX_FRAME_SCAN_START,
+	KIGRAX_FRAME_SCAN_END,
+	kigrax_frames_scan,
+	kigrax_idle_select
+};
+
+static mmove_t kigrax_move_patrol_ccw = {
+	KIGRAX_FRAME_PATROL_CCW_START,
+	KIGRAX_FRAME_PATROL_CCW_END,
+	kigrax_frames_patrol_ccw,
+	kigrax_walk_select
+};
+
+static mmove_t kigrax_move_patrol_cw = {
+	KIGRAX_FRAME_PATROL_CW_START,
+	KIGRAX_FRAME_PATROL_CW_END,
+	kigrax_frames_patrol_cw,
+	kigrax_walk_select
+};
+
+static mmove_t kigrax_move_strafe_long = {
+	KIGRAX_FRAME_STRAFE_LONG_START,
+	KIGRAX_FRAME_STRAFE_LONG_END,
+	kigrax_frames_strafe_long,
+	kigrax_run_select
+};
+
+static mmove_t kigrax_move_strafe_dash = {
+	KIGRAX_FRAME_STRAFE_DASH_START,
+	KIGRAX_FRAME_STRAFE_DASH_END,
+	kigrax_frames_strafe_dash,
+	kigrax_run_select
+};
+
+static mmove_t kigrax_move_attack_prep = {
+	KIGRAX_FRAME_ATTACK_PREP_START,
+	KIGRAX_FRAME_ATTACK_PREP_END,
+	kigrax_frames_attack_prep,
+	kigrax_attack_execute
+};
+
+static mmove_t kigrax_move_attack = {
+	KIGRAX_FRAME_ATTACK_START,
+	KIGRAX_FRAME_ATTACK_END,
+	kigrax_frames_attack,
+	kigrax_attack_salvo
+};
+
+static mmove_t kigrax_move_pain = {
+	KIGRAX_FRAME_PAIN_START,
+	KIGRAX_FRAME_PAIN_END,
+	kigrax_frames_pain,
+	kigrax_end_pain
+};
+
+static mmove_t kigrax_move_death = {
+	KIGRAX_FRAME_DEATH_START,
+	KIGRAX_FRAME_DEATH_END,
+	kigrax_frames_death,
+	kigrax_dead
+};
+
+/*
+=============
+kigrax_seed_frames
+
+Populate a contiguous frame array with a shared AI routine and movement scale.
+=============
+*/
+static void kigrax_seed_frames (mframe_t *frames, size_t frame_count, ai_function aifunc, float dist)
+{
+		size_t		index;
+
+		for (index = 0; index < frame_count; index++)
+		{
+			frames[index].aifunc = aifunc;
+			frames[index].dist = dist;
+			frames[index].thinkfunc = NULL;
+		}
+}
+
+/*
+=============
+kigrax_init_moves
+
+Recreate the HLIL mmove tables, wiring per-frame callbacks for salvo, pain, and
+debris emission so the patrol/attack cadence mirrors the retail DLL.
+=============
+*/
+static void kigrax_init_moves (void)
+{
+		kigrax_seed_frames (kigrax_frames_hover, ARRAY_LEN (kigrax_frames_hover), ai_stand, 0.0f);
+		kigrax_seed_frames (kigrax_frames_scan, ARRAY_LEN (kigrax_frames_scan), ai_stand, 0.0f);
+		kigrax_seed_frames (kigrax_frames_patrol_ccw, ARRAY_LEN (kigrax_frames_patrol_ccw), ai_walk, 0.0f);
+		kigrax_seed_frames (kigrax_frames_patrol_cw, ARRAY_LEN (kigrax_frames_patrol_cw), ai_walk, 0.0f);
+		kigrax_seed_frames (kigrax_frames_strafe_long, ARRAY_LEN (kigrax_frames_strafe_long), ai_run, 0.0f);
+		kigrax_seed_frames (kigrax_frames_strafe_dash, ARRAY_LEN (kigrax_frames_strafe_dash), ai_run, 0.0f);
+		kigrax_seed_frames (kigrax_frames_attack_prep, ARRAY_LEN (kigrax_frames_attack_prep), ai_move, 0.0f);
+		kigrax_seed_frames (kigrax_frames_attack, ARRAY_LEN (kigrax_frames_attack), ai_move, 0.0f);
+
+		memcpy (kigrax_frames_pain, kigrax_frames_pain_template, sizeof (kigrax_frames_pain_template));
+		kigrax_frames_pain[ARRAY_LEN (kigrax_frames_pain) - 1].thinkfunc = kigrax_end_pain;
+
+		memcpy (kigrax_frames_death, kigrax_frames_death_template, sizeof (kigrax_frames_death_template));
+		kigrax_frames_death[3].thinkfunc = kigrax_spawn_debris;
+		kigrax_frames_death[10].thinkfunc = kigrax_spawn_debris;
+
+		kigrax_frames_attack[KIGRAX_FRAME_ATTACK_FIRE - KIGRAX_FRAME_ATTACK_START].thinkfunc = kigrax_attack_salvo;
+}
+
 static int sound_sight;
 static int sound_search;
 static int sound_idle;
@@ -89,11 +228,6 @@ static int sound_pain;
 static int sound_pain_strong;
 static int sound_death;
 static int sound_attack;
-
-static void kigrax_idle_select (edict_t *self);
-static void kigrax_walk_select (edict_t *self);
-static void kigrax_run_select (edict_t *self);
-static void kigrax_attack_execute (edict_t *self);
 static void kigrax_attack_salvo (edict_t *self)
 {
 	if (!(self->monsterinfo.aiflags & AI_DUCKED))
