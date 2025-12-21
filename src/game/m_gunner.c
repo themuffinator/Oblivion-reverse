@@ -451,22 +451,38 @@ void GunnerGrenade (edict_t *self)
 	vec3_t	start;
 	vec3_t	forward, right;
 	vec3_t	aim;
+	vec3_t	angles;
 	int		flash_number;
+	float	spread = 0;
 
 	if (self->s.frame == FRAME_attak105)
+	{
 		flash_number = MZ2_GUNNER_GRENADE_1;
+		spread = -22.5;
+	}
 	else if (self->s.frame == FRAME_attak108)
+	{
 		flash_number = MZ2_GUNNER_GRENADE_2;
+		spread = -7.5;
+	}
 	else if (self->s.frame == FRAME_attak111)
+	{
 		flash_number = MZ2_GUNNER_GRENADE_3;
+		spread = 7.5;
+	}
 	else // (self->s.frame == FRAME_attak114)
+	{
 		flash_number = MZ2_GUNNER_GRENADE_4;
+		spread = 22.5;
+	}
 
 	AngleVectors (self->s.angles, forward, right, NULL);
 	G_ProjectSource (self->s.origin, monster_flash_offset[flash_number], forward, right, start);
 
-	//FIXME : do a spread -225 -75 75 225 degrees around forward
-	VectorCopy (forward, aim);
+	// do a spread -22.5 -7.5 7.5 22.5 degrees around forward
+	vectoangles (forward, angles);
+	angles[YAW] += spread;
+	AngleVectors (angles, aim, NULL, NULL);
 
 	monster_fire_grenade (self, start, aim, 50, 600, flash_number);
 }
