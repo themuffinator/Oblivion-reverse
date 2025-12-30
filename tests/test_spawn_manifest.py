@@ -239,11 +239,8 @@ class Sub1000b150LogTest(unittest.TestCase):
         script = repo_root / "tools" / "extract_spawn_manifest.py"
         expected_path = (
             repo_root
-            / "references"
-            / "HLIL"
-            / "oblivion"
-            / "interpreted"
-            / "sub_1000b150_map.json"
+            / "tests"
+            / "expected_sub_1000b150_map.json"
         )
         with tempfile.TemporaryDirectory() as tmpdir:
             output = Path(tmpdir) / "map.json"
@@ -265,6 +262,19 @@ class Sub1000b150LogTest(unittest.TestCase):
             expected,
             "sub_1000b150_map.json is out of date; rerun extract_spawn_manifest.py with --dump-b150-map",
         )
+
+    def test_logged_map_resolves_itemlist_pickups(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        expected_path = repo_root / "tests" / "expected_sub_1000b150_map.json"
+        expected = json.loads(expected_path.read_text(encoding="utf-8"))
+        classnames = {entry["classname"] for entry in expected}
+        required = {
+            "weapon_blaster": "Missing weapon_blaster pickup mapping in sub_1000b150 map",
+            "weapon_plasma_pistol": "Missing weapon_plasma_pistol pickup mapping in sub_1000b150 map",
+            "weapon_remote_detonator": "Missing weapon_remote_detonator pickup mapping in sub_1000b150 map",
+        }
+        for classname, message in required.items():
+            self.assertIn(classname, classnames, message)
 
 
 if __name__ == "__main__":

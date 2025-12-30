@@ -17,6 +17,8 @@ from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 # ----------------------------- utility helpers -----------------------------
 
+SUB_1000B150_LITERAL_ALIASES: Dict[str, Dict[str, object]] = {}
+
 def _parse_hex_bytes(line: str) -> List[int]:
     """Return a list of byte values parsed from a line of hex dump text."""
     hex_bytes = re.findall(r"(?i)\b[0-9a-f]{2}\b", line)
@@ -108,6 +110,7 @@ class HLILParser:
         self._image_base: Optional[int] = None
         self._spawn_table_cache: Dict[Tuple[int, int], Dict[str, str]] = {}
         self._itemlist_cache: Optional[Dict[str, Tuple[int, ...]]] = None
+        self._itemlist_pickup_cache: Optional[Dict[str, Dict[str, object]]] = None
         self._call_graph_entries: Optional[Dict[str, str]] = None
         self._spawn_table_records_cache: Optional[List[Dict[str, object]]] = None
         self._sub_1000b150_literals: Optional[Dict[str, Set[str]]] = None
@@ -899,6 +902,50 @@ class HLILParser:
         self._itemlist_cache = entries
         return entries
 
+    def _itemlist_pickup_name_map(self) -> Dict[str, Dict[str, object]]:
+        if self._itemlist_pickup_cache is not None:
+            return self._itemlist_pickup_cache
+        entries: Dict[str, Dict[str, object]] = {}
+        if not self._load_binary_image() or self._binary_data is None:
+            self._itemlist_pickup_cache = entries
+            return entries
+        base_address = 0x10046928
+        entry_size = 0x48
+        offset = self._va_to_file_offset(base_address)
+        if offset is None:
+            self._itemlist_pickup_cache = entries
+            return entries
+        data = self._binary_data
+        idx = 0
+        while offset + (idx + 1) * entry_size <= len(data):
+            start = offset + idx * entry_size
+            chunk = data[start : start + entry_size]
+            if len(chunk) < entry_size:
+                break
+            values = struct.unpack("<" + "I" * (entry_size // 4), chunk)
+            if not any(values):
+                if idx != 0:
+                    break
+                idx += 1
+                continue
+            classname_ptr = values[0]
+            classname = self._read_c_string(classname_ptr) if classname_ptr else None
+            pickup_ptr = values[0x28 // 4]
+            pickup_name = self._read_c_string(pickup_ptr) if pickup_ptr else None
+            if classname and pickup_name:
+                normalized = self._normalize_classname(classname)
+                entries.setdefault(
+                    pickup_name.lower(),
+                    {
+                        "classname": normalized,
+                        "index": idx,
+                        "pickup_name": pickup_name,
+                    },
+                )
+            idx += 1
+        self._itemlist_pickup_cache = entries
+        return entries
+
     def _itemlist_defaults_for(self, classname: str) -> Dict[str, List[Dict[str, object]]]:
         entries = self._itemlist_entries()
         values = entries.get(classname)
@@ -953,6 +1000,8 @@ class HLILParser:
         if not literal_sources:
             return {}
         text_map: Dict[str, Dict[str, object]] = {}
+        itemlist_map = self._itemlist_pickup_name_map()
+        fallback_functions = self._spawn_entries_from_binary_tables()
         for record in self._spawn_table_records():
             text_label = record.get("text_label")
             if not text_label:
@@ -962,20 +1011,47 @@ class HLILParser:
         entries: Dict[str, Dict[str, object]] = {}
         for literal, source_paths in literal_sources.items():
             record = text_map.get(literal.lower())
-            if not record:
-                continue
-            classname = record.get("classname")
-            function = record.get("function")
-            index = record.get("index")
+            if record:
+                classname = record.get("classname")
+                function = record.get("function")
+                index = record.get("index")
+            else:
+                pickup_record = itemlist_map.get(literal.lower())
+                if pickup_record:
+                    classname = pickup_record.get("classname")
+                    index = pickup_record.get("index")
+                    function = fallback_functions.get(
+                        classname, "SpawnItemFromItemlist"
+                    )
+                else:
+                    alias = SUB_1000B150_LITERAL_ALIASES.get(literal.lower())
+                    if not alias:
+                        continue
+                    classname = alias.get("classname")
+                    index = alias.get("index")
+                    function = fallback_functions.get(
+                        classname, "SpawnItemFromItemlist"
+                    )
             if classname is None or function is None or index is None:
                 continue
-            normalized = self._normalize_classname(classname)
+            normalized = self._normalize_classname(str(classname))
+            merged_sources = sorted(source_paths)
+            existing = entries.get(normalized)
+            if existing:
+                merged_sources = sorted(
+                    set(existing.get("sources", [])) | set(source_paths)
+                )
+                if existing.get("function") != "SpawnItemFromItemlist":
+                    function = existing["function"]
+                if existing.get("index") is not None:
+                    index = existing["index"]
+                literal = existing.get("literal", literal)
             entries[normalized] = {
                 "classname": normalized,
-                "function": function,
+                "function": str(function),
                 "index": int(index),
                 "literal": literal,
-                "sources": sorted(source_paths),
+                "sources": merged_sources,
             }
 
         return entries
