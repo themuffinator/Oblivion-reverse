@@ -339,7 +339,7 @@ static void spider_idle(edict_t *self)
 {
 	if (random() < 0.25f)
 	{
-	gi.sound(self, CHAN_VOICE, sound_idle, 1.0f, ATTN_IDLE, 0.0f);
+		gi.sound(self, CHAN_VOICE, sound_idle, 1.0f, ATTN_IDLE, 0.0f);
 	}
 }
 
@@ -405,14 +405,14 @@ static void spider_claw(edict_t *self)
 
 	if (!self->enemy)
 	{
-	return;
+		return;
 	}
 
 	AngleVectors(self->s.angles, forward, NULL, NULL);
 
 	if (range(self, self->enemy) > RANGE_MELEE)
 	{
-	return;
+		return;
 	}
 
 	gi.sound(self, CHAN_WEAPON, sound_melee[rand() % 3], 1.0f, ATTN_NORM, 0.0f);
@@ -771,15 +771,15 @@ static void spider_attack_recover_end(edict_t *self)
 
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 	{
-	spider_stand(self);
+		spider_stand(self);
 	}
 	else if (self->enemy && range(self, self->enemy) <= RANGE_MELEE && random() > 0.6f)
 	{
-	spider_combo_entry(self);
+		spider_combo_entry(self);
 	}
 	else
 	{
-	spider_select_locomotion(self);
+		spider_select_locomotion(self);
 	}
 }
 
@@ -792,7 +792,7 @@ Handle stagger tracking, cooldown management, and pain animation entry.
 */
 static void spider_pain(edict_t *self, edict_t *other, float kick, int damage)
 {
-	qboolean play_secondary = (rand() & 1);
+	int pain_index;
 
 	if (level.time < self->pain_debounce_time)
 	{
@@ -800,12 +800,8 @@ static void spider_pain(edict_t *self, edict_t *other, float kick, int damage)
 	}
 
 	self->pain_debounce_time = level.time + SPIDER_PAIN_DEBOUNCE;
-	gi.sound(self, CHAN_VOICE, sound_pain1, 1.0f, ATTN_NORM, 0.0f);
-
-	if (play_secondary)
-	{
-		gi.sound(self, CHAN_BODY, sound_pain2, 1.0f, ATTN_NORM, 0.0f);
-	}
+	pain_index = (rand() & 1) ? sound_pain2 : sound_pain1;
+	gi.sound(self, CHAN_VOICE, pain_index, 1.0f, ATTN_NORM, 0.0f);
 	spider_mark_stagger(self);
 	self->monsterinfo.currentmove = &spider_move_pain;
 }
