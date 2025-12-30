@@ -10653,9 +10653,7 @@
       }
     },
     "misc_teleporter_dest": {
-      "defaults": {
-        "s.skinnum": 0.0
-      },
+      "defaults": {},
       "function": "SP_misc_teleporter_dest",
       "spawnflags": {
         "assignments": [],
@@ -10930,7 +10928,11 @@
       }
     },
     "monster_makron": {
-      "defaults": {},
+      "defaults": {
+        "gib_health": -2000.0,
+        "health": 3000.0,
+        "mass": 500.0
+      },
       "function": "SP_monster_makron",
       "spawnflags": {
         "assignments": [],

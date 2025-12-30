@@ -58,6 +58,11 @@ manifest: every literal seen in `sub_1000b150("…")` is resolved back to the
 underlying `spawn_t` entry, the `(ptr - &data_10046928) / 0x48` index is
 recorded, and the canonical classname/function pair is fed back into the
 manifest builder so the ammo/weapon rows no longer require manual annotation.
+If a literal does not match the `text_label` slot in the spawn table, the
+extractor now falls back to the `pickup_name` column in the `data_10046928`
+itemlist array (case-insensitive), which captures runtime lookups such as
+`"Plasma Pistol"` and `"Remote Detonator"` that are otherwise stored under
+alternate labels like `"PistolPlasma"` or omitted from the HLIL string tables.
 The interpreted data is stored at
 `references/HLIL/oblivion/interpreted/sub_1000b150_map.json`; regenerate it
 with:
@@ -69,6 +74,18 @@ python tools/extract_spawn_manifest.py \
 
 when a new binary is analyzed. The snapshot test will fail if the map drifts,
 making the refresh requirement explicit for contributors.
+
+Manual mapping approach:
+
+* If a `sub_1000b150("…")` literal still fails to resolve after the itemlist
+  fallback (for example, `"Health"`), cross-reference `data_10046928` in Binary
+  Ninja and confirm which `pickup_name` entry the runtime code expects.
+* Use the `g_items.c` itemlist to confirm the intended classname/pickup name
+  pairing, then add an explicit alias to `SUB_1000B150_LITERAL_ALIASES` in
+  `tools/extract_spawn_manifest.py` with the `classname` and table `index` so
+  the resolver can be replayed deterministically during manifest generation.
+* Re-run the extractor and refresh the manifest snapshots so future changes
+  stay anchored to the updated alias set.
 
 ### Target/trigger names resolved through `sub_1001ad80`
 
