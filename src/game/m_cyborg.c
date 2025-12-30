@@ -96,8 +96,8 @@ static void cyborg_fire_deatom (edict_t *self, const vec3_t muzzle_offset, int s
 	if (!self->enemy)
 		return;
 
-if (sample_index < 0 || sample_index >= (int) (sizeof (sound_attack) / sizeof (sound_attack[0])))
-sample_index = rand () % (int) (sizeof (sound_attack) / sizeof (sound_attack[0]));
+	if (sample_index < 0 || sample_index >= (int) (sizeof (sound_attack) / sizeof (sound_attack[0])))
+		sample_index = rand () % (int) (sizeof (sound_attack) / sizeof (sound_attack[0]));
 
 	AngleVectors (self->s.angles, forward, right, NULL);
 	VectorCopy (muzzle_offset, offset);
@@ -338,8 +338,8 @@ Check whether the wounded stand-ground timer has elapsed and clear the flag.
 */
 static qboolean cyborg_update_stand_ground (edict_t *self)
 {
-if (!(self->monsterinfo.aiflags & AI_STAND_GROUND))
-return false;
+	if (!(self->monsterinfo.aiflags & AI_STAND_GROUND))
+		return false;
 
 	if (self->oblivion.cyborg_anchor_time <= 0.0f)
 		return false;
@@ -364,10 +364,10 @@ static void cyborg_schedule_stand_ground (edict_t *self, float duration)
 {
 	float		anchor_expire;
 
-if (duration <= 0.0f)
-return;
+	if (duration <= 0.0f)
+		return;
 
-self->monsterinfo.aiflags |= (AI_STAND_GROUND | AI_TEMP_STAND_GROUND);
+	self->monsterinfo.aiflags |= (AI_STAND_GROUND | AI_TEMP_STAND_GROUND);
 	self->oblivion.cyborg_landing_thud = true;
 	anchor_expire = level.time + duration;
 
@@ -578,6 +578,13 @@ static void cyborg_attack (edict_t *self)
 	cyborg_attack_dispatch (self);
 }
 
+/*
+=============
+cyborg_attack_dispatch
+
+Choose between the retail attack chains and schedule the cooldown.
+=============
+*/
 static void cyborg_attack_dispatch (edict_t *self)
 {
 	float	choice;
@@ -645,10 +652,10 @@ static void cyborg_pain (edict_t *self, edict_t *other, float kick, int damage)
 {
 	int	slot;
 
-if (level.time < self->pain_debounce_time)
-return;
+	if (level.time < self->pain_debounce_time)
+		return;
 
-self->pain_debounce_time = level.time + 3.0f;
+	self->pain_debounce_time = level.time + 3.0f;
 	self->oblivion.cyborg_pain_time = self->pain_debounce_time;
 
 	/* Update the wounded anchor thresholds on every damage event so the
@@ -667,20 +674,34 @@ self->pain_debounce_time = level.time + 3.0f;
 		self->monsterinfo.currentmove = &cyborg_move_pain_recover;
 }
 
+/*
+=============
+cyborg_dead
+
+Mark the cyborg as a corpse and allow gibbing.
+=============
+*/
 static void cyborg_dead (edict_t *self)
 {
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
 }
 
+/*
+=============
+cyborg_die
+
+Handle death audio, gibbing, and fall-through to the death mmove.
+=============
+*/
 static void cyborg_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
 {
-static mframe_t death_frames[] = {
-{ai_move, 0, NULL},
-{ai_move, 0, NULL},
-{ai_move, 0, cyborg_dead}
-};
-static mmove_t death_move = {CYBORG_FRAME_DEATH_START, CYBORG_FRAME_DEATH_END, death_frames, cyborg_dead};
+	static mframe_t death_frames[] = {
+		{ai_move, 0, NULL},
+		{ai_move, 0, NULL},
+		{ai_move, 0, cyborg_dead}
+	};
+	static mmove_t death_move = {CYBORG_FRAME_DEATH_START, CYBORG_FRAME_DEATH_END, death_frames, cyborg_dead};
 
 	self->oblivion.cyborg_anchor_time = 0.0f;
 	self->oblivion.cyborg_anchor_stage = 0;
@@ -689,49 +710,56 @@ static mmove_t death_move = {CYBORG_FRAME_DEATH_START, CYBORG_FRAME_DEATH_END, d
 
 	gi.sound (self, CHAN_VOICE, sound_death, 1, ATTN_NORM, 0);
 
-    if (self->health <= self->gib_health)
-    {
-        gi.sound (self, CHAN_VOICE, gi.soundindex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
-        ThrowGib (self, "models/objects/gibs/sm_meat/tris.md2", damage, GIB_ORGANIC);
-        ThrowGib (self, "models/objects/gibs/bone/tris.md2", damage, GIB_ORGANIC);
-        ThrowHead (self, "models/objects/gibs/head2/tris.md2", damage, GIB_ORGANIC);
-        return;
-    }
+	if (self->health <= self->gib_health)
+	{
+		gi.sound (self, CHAN_VOICE, gi.soundindex ("misc/udeath.wav"), 1, ATTN_NORM, 0);
+		ThrowGib (self, "models/objects/gibs/sm_meat/tris.md2", damage, GIB_ORGANIC);
+		ThrowGib (self, "models/objects/gibs/bone/tris.md2", damage, GIB_ORGANIC);
+		ThrowHead (self, "models/objects/gibs/head2/tris.md2", damage, GIB_ORGANIC);
+		return;
+	}
 
-    self->monsterinfo.currentmove = &death_move;
+	self->monsterinfo.currentmove = &death_move;
 }
 
+/*
+=============
+SP_monster_cyborg
+
+Spawn function for the Oblivion cyborg.
+=============
+*/
 void SP_monster_cyborg (edict_t *self)
 {
-    if (deathmatch->value)
-    {
-        G_FreeEdict (self);
-        return;
-    }
+	if (deathmatch->value)
+	{
+		G_FreeEdict (self);
+		return;
+	}
 
-    self->s.modelindex = gi.modelindex ("models/monsters/cyborg/tris.md2");
-    VectorSet (self->mins, -16.0f, -16.0f, -38.0f);
-    VectorSet (self->maxs, 16.0f, 16.0f, 27.0f);
-    self->movetype = MOVETYPE_STEP;
-    self->solid = SOLID_BBOX;
-    self->mass = 300;
+	self->s.modelindex = gi.modelindex ("models/monsters/cyborg/tris.md2");
+	VectorSet (self->mins, -16.0f, -16.0f, -38.0f);
+	VectorSet (self->maxs, 16.0f, 16.0f, 27.0f);
+	self->movetype = MOVETYPE_STEP;
+	self->solid = SOLID_BBOX;
+	self->mass = 300;
 
-    sound_sight = gi.soundindex ("cyborg/mutsght1.wav");
-    sound_search = gi.soundindex ("cyborg/mutsrch1.wav");
-    sound_idle = gi.soundindex ("cyborg/mutidle1.wav");
+	sound_sight = gi.soundindex ("cyborg/mutsght1.wav");
+	sound_search = gi.soundindex ("cyborg/mutsrch1.wav");
+	sound_idle = gi.soundindex ("cyborg/mutidle1.wav");
 	sound_pain = gi.soundindex ("cyborg/mutpain1.wav");
 	sound_pain_samples[0] = sound_pain;
 	sound_pain_samples[1] = gi.soundindex ("cyborg/mutpain2.wav");
-sound_death = gi.soundindex ("cyborg/mutdeth1.wav");
-sound_attack[0] = gi.soundindex ("cyborg/mutatck1.wav");
-sound_attack[1] = gi.soundindex ("cyborg/mutatck2.wav");
-sound_attack[2] = gi.soundindex ("cyborg/mutatck3.wav");
-sound_step[0] = gi.soundindex ("cyborg/step1.wav");
-sound_step[1] = gi.soundindex ("cyborg/step2.wav");
-sound_step[2] = gi.soundindex ("cyborg/step3.wav");
-sound_thud = sound_step[2];
+	sound_death = gi.soundindex ("cyborg/mutdeth1.wav");
+	sound_attack[0] = gi.soundindex ("cyborg/mutatck1.wav");
+	sound_attack[1] = gi.soundindex ("cyborg/mutatck2.wav");
+	sound_attack[2] = gi.soundindex ("cyborg/mutatck3.wav");
+	sound_step[0] = gi.soundindex ("cyborg/step1.wav");
+	sound_step[1] = gi.soundindex ("cyborg/step2.wav");
+	sound_step[2] = gi.soundindex ("cyborg/step3.wav");
+	sound_thud = gi.soundindex ("mutant/thud1.wav");
 
-    self->s.sound = gi.soundindex ("cyborg/mutidle1.wav");
+	self->s.sound = gi.soundindex ("cyborg/mutidle1.wav");
 
 	self->health = 300;
 	self->gib_health = -120;
@@ -743,20 +771,20 @@ sound_thud = sound_step[2];
 	self->oblivion.cyborg_pain_time = 0.0f;
 	self->oblivion.cyborg_pain_slot = 0;
 	self->pain = cyborg_pain;
-    self->die = cyborg_die;
+	self->die = cyborg_die;
 
-    self->monsterinfo.stand = cyborg_stand;
-    self->monsterinfo.idle = cyborg_stand;
-    self->monsterinfo.walk = cyborg_walk;
-    self->monsterinfo.run = cyborg_run;
-    self->monsterinfo.sight = cyborg_sight;
-    self->monsterinfo.search = cyborg_search;
-    self->monsterinfo.melee = NULL;
-    self->monsterinfo.attack = cyborg_attack;
+	self->monsterinfo.stand = cyborg_stand;
+	self->monsterinfo.idle = cyborg_stand;
+	self->monsterinfo.walk = cyborg_walk;
+	self->monsterinfo.run = cyborg_run;
+	self->monsterinfo.sight = cyborg_sight;
+	self->monsterinfo.search = cyborg_search;
+	self->monsterinfo.melee = NULL;
+	self->monsterinfo.attack = cyborg_attack;
 
-    self->monsterinfo.max_ideal_distance = 512;
+	self->monsterinfo.max_ideal_distance = 512;
 
-    cyborg_stand (self);
+	cyborg_stand (self);
 
-    walkmonster_start (self);
+	walkmonster_start (self);
 }

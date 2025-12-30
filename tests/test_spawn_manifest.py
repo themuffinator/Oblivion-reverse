@@ -143,7 +143,7 @@ class SpawnManifestSnapshotTest(unittest.TestCase):
                     "gib_health": -120.0,
                 },
                 "spawnflags": {
-                    "checks": [256],
+                    "checks": [8],
                 },
             },
             "monster_kigrax": {

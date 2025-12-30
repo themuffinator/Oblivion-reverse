@@ -11066,7 +11066,7 @@
       "spawnflags": {
         "assignments": [],
         "checks": [
-          256
+          8
         ],
         "clears": [],
         "sets": []
