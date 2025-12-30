@@ -607,14 +607,27 @@ trigger_teleport
 ==============================================================================
 */
 
-#define TELEPORT_SF_NOMONSTER     1
 #define TELEPORT_SF_NOPLAYER      2
 #define TELEPORT_SF_START_OFF     4
 #define TELEPORT_SF_NOEFFECTS     8
 #define TELEPORT_SF_NOTOUCH       16
 
+/*
+=============
+trigger_teleport_touch
+
+Handle a touch event for a teleport trigger.
+=============
+*/
 static void trigger_teleport_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf);
 
+/*
+=============
+trigger_teleport_disable
+
+Disable the teleport trigger touch.
+=============
+*/
 static void trigger_teleport_disable(edict_t *self)
 {
 	self->touch = NULL;
@@ -622,6 +635,13 @@ static void trigger_teleport_disable(edict_t *self)
 	self->nextthink = 0;
 }
 
+/*
+=============
+trigger_teleport_enable
+
+Enable the teleport trigger touch.
+=============
+*/
 static void trigger_teleport_enable(edict_t *self)
 {
 	self->touch = trigger_teleport_touch;
@@ -629,6 +649,13 @@ static void trigger_teleport_enable(edict_t *self)
 	self->nextthink = 0;
 }
 
+/*
+=============
+trigger_teleport_toggle
+
+Toggle the teleport trigger's touch state.
+=============
+*/
 static void trigger_teleport_toggle(edict_t *self, edict_t *other, edict_t *activator)
 {
 	if (self->touch)
@@ -637,6 +664,13 @@ static void trigger_teleport_toggle(edict_t *self, edict_t *other, edict_t *acti
 		trigger_teleport_enable(self);
 }
 
+/*
+=============
+trigger_teleport_activate
+
+Enable the teleport trigger for a single frame.
+=============
+*/
 static void trigger_teleport_activate(edict_t *self, edict_t *other, edict_t *activator)
 {
 	trigger_teleport_enable(self);
@@ -644,6 +678,13 @@ static void trigger_teleport_activate(edict_t *self, edict_t *other, edict_t *ac
 	self->nextthink = level.time + FRAMETIME;
 }
 
+/*
+=============
+trigger_teleport_normalize_angles
+
+Normalize teleport destination angles to [0, 360).
+=============
+*/
 static void trigger_teleport_normalize_angles(vec3_t angles)
 {
 	int i;
@@ -657,6 +698,13 @@ static void trigger_teleport_normalize_angles(vec3_t angles)
 	}
 }
 
+/*
+=============
+trigger_teleport_find_destination
+
+Find the destination entity for a teleport trigger.
+=============
+*/
 static edict_t *trigger_teleport_find_destination(edict_t *self)
 {
 	edict_t *ent = NULL;
@@ -677,6 +725,13 @@ static edict_t *trigger_teleport_find_destination(edict_t *self)
 	return fallback;
 }
 
+/*
+=============
+trigger_teleport_touch
+
+Teleport the touching entity if it is eligible.
+=============
+*/
 static void trigger_teleport_touch(edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
 {
 	edict_t *dest;
@@ -694,12 +749,7 @@ static void trigger_teleport_touch(edict_t *self, edict_t *other, cplane_t *plan
 		if (self->spawnflags & TELEPORT_SF_NOPLAYER)
 			return;
 	}
-	else if (other->svflags & SVF_MONSTER)
-	{
-		if (self->spawnflags & TELEPORT_SF_NOMONSTER)
-			return;
-	}
-	else
+	else if (!(other->svflags & SVF_MONSTER))
 	{
 		return;
 	}
@@ -759,6 +809,13 @@ static void trigger_teleport_touch(edict_t *self, edict_t *other, cplane_t *plan
 	gi.linkentity(other);
 }
 
+/*
+=============
+SP_trigger_teleport
+
+Spawn a teleport trigger entity.
+=============
+*/
 void SP_trigger_teleport (edict_t *self)
 {
 	if (!self->target)
@@ -785,8 +842,6 @@ void SP_trigger_teleport (edict_t *self)
 	{
 		self->use = trigger_teleport_activate;
 
-		if (self->spawnflags & TELEPORT_SF_NOMONSTER)
-			gi.dprintf ("ignored NOMONSTER spawnflag on trigger_teleport\n");
 		if (self->spawnflags & TELEPORT_SF_NOPLAYER)
 			gi.dprintf ("ignored NOPLAYER spawnflag on trigger_teleport\n");
 		gi.dprintf ("ignored NOTOUCH spawnflag on trigger_teleport\n");
@@ -801,4 +856,3 @@ void SP_trigger_teleport (edict_t *self)
 
 	gi.linkentity (self);
 }
-
