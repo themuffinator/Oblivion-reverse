@@ -175,7 +175,7 @@ static void Actor_ApplyTargetnameDefault(edict_t *self)
 	if (!self)
 		return;
 
-	if (self->targetname && self->targetname[0])
+	if (self->targetname)
 		return;
 
 	self->targetname = (char *)kDefaultTargetName;
