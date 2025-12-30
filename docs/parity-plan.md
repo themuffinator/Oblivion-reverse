@@ -6,7 +6,7 @@ Purpose: track the work required to bring the reconstructed Oblivion game DLL to
 - **Spawn coverage** – HLIL manifests show core Quake II items, weapons, keys, and trigger/target classes missing from `g_spawn.c`, so retail maps drop entities during parsing.【F:docs/manifests/spawn_manifest_comparison.json†L2-L59】【F:docs/manifests/spawn_manifest_comparison.json†L18-L55】
 - **Default seeds and spawnflag handling** – Moving brushes, mission helpers, and several monsters lack the default speed/accel/decel and AI pointer assignments present in the retail DLL; brush entities also diverge on spawnflag bit clearing (e.g., `func_door`).【F:docs/manifests/spawn_manifest_comparison.json†L65-L183】
 - **Monster AI completeness** – Cyborg, spider, and kigrax behaviour still differs from the HLIL snapshot (collapsed mmove tables, simplified attack/pain handling, missing salvo/hull toggles).【F:docs/monster_ai_discrepancies.md†L6-L82】【F:docs/monster_ai_discrepancies.md†L84-L180】
-- **Mission/path actors** – `misc_actor` and related mission scripting paths add hidden defaults (e.g., injected `"Yo Mama"` targetname, START_ON spawnflag) and broadened timers that need verification across spawn, save, and think loops.【F:docs/oblivion_reverse_analysis.md†L35-L116】【F:docs/oblivion_reverse_analysis.md†L117-L202】
+- **Mission/path actors** – `misc_actor` and related mission scripting paths add hidden defaults (e.g., injected `"Yo Mama"` targetname, START_ON spawnflag) and broadened timers that need verification across spawn, save, and think loops. Audit also shows `mission_velocity`/`mission_blend` are serialized but not yet consumed when building mission objectives, so HLIL validation is still required.【F:docs/oblivion_reverse_analysis.md†L35-L206】【F:src/game/g_local.h†L65-L76】【F:src/game/g_save.c†L74-L85】【F:src/game/g_mission.c†L390-L413】
 
 ## Work plan (ordered and task-oriented)
 - [x] **Draft and check in the parity plan** – Capture the current audit state and ordered milestones in this document.
@@ -34,6 +34,7 @@ Purpose: track the work required to bring the reconstructed Oblivion game DLL to
 - [ ] **Verify mission actor/controller parity**
   - [ ] Align `misc_actor`/`target_actor` spawn defaults, START_ON handling, and injected targetnames.
   - [ ] Confirm mission timer/state persistence through save/load and multi-client messaging paths.
+  - [ ] Validate `mission_velocity`/`mission_blend` consumption in mission objective updates; currently the mission HUD pipeline only reads origin/angles/radius and timer/flag data.【F:src/game/g_local.h†L65-L76】【F:src/game/g_save.c†L74-L85】【F:src/game/g_mission.c†L400-L413】
   - [ ] Add mission-script regression coverage for spawn, think, and completion loops.
   - [ ] Re-run map-level checks to ensure actor entities spawn and behave identically.
 - [ ] **Full-game regression and demo validation**
