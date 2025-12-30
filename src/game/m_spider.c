@@ -430,11 +430,11 @@ static void spider_idle_loop(edict_t *self)
 {
 	if (self->oblivion.spider_alt_idle)
 	{
-	self->monsterinfo.currentmove = &spider_move_boss_idle;
+		self->monsterinfo.currentmove = &spider_move_boss_idle;
 	}
 	else
 	{
-	self->monsterinfo.currentmove = &spider_move_stand;
+		self->monsterinfo.currentmove = &spider_move_stand;
 	}
 }
 
@@ -926,7 +926,7 @@ void SP_monster_spider(edict_t *self)
 	self->oblivion.spider_combo_next = SPIDER_CHAIN_PRIMARY;
 	spider_clear_combo_state(self);
 	spider_clear_stagger(self);
-	self->oblivion.spider_alt_idle = (self->spawnflags & 0x100) != 0;
+	self->oblivion.spider_alt_idle = (self->spawnflags & 0x8) != 0;
 
 	if (self->oblivion.spider_alt_idle)
 	{

@@ -11917,16 +11917,6 @@
         ]
       ]
     },
-    "monster_spider": {
-      "checks": [
-        [
-          8
-        ],
-        [
-          256
-        ]
-      ]
-    },
     "target_speaker": {
       "checks": [
         [],
