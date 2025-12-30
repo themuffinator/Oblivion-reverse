@@ -39,7 +39,8 @@ class ActorSpawnAndMissionPersistenceTests(unittest.TestCase):
     def test_spawn_defaults_force_targetname_and_start_on_use(self) -> None:
         helper_block = extract_function_block(self.actor_text, "Actor_ApplyTargetnameDefault")
         self.assertIn("Yo Mama", helper_block)
-        self.assertIn("self->targetname && self->targetname[0]", helper_block)
+        self.assertIn("self->targetname", helper_block)
+        self.assertNotIn("targetname[0]", helper_block)
         self.assertIn("self->targetname = (char *)kDefaultTargetName;", helper_block)
         self.assertIn("self->spawnflags |= ACTOR_SPAWNFLAG_START_ON;", helper_block)
 
@@ -140,6 +141,10 @@ class ActorSpawnAndMissionPersistenceTests(unittest.TestCase):
             r"for\s*\(\s*i\s*=\s*1;\s*i\s*<=\s*game\.maxclients;\s*i\+\+\s*\)[\s\S]*gi\.cprintf",
             msg="Actor messages should loop over every active client",
         )
+
+    def test_target_actor_touch_uses_broadcast_helper(self) -> None:
+        block = extract_function_block(self.actor_text, "target_actor_touch")
+        self.assertIn("Actor_BroadcastMessage(other, self->message);", block)
 
     def test_target_help_broadcasts_to_all_clients(self) -> None:
         block = extract_function_block(self.target_text, "Use_Target_Help")
