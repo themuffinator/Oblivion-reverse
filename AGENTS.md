@@ -13,4 +13,5 @@ This repository currently has the following rules for agents:
 - Do not make significant decisions based on assumptions; ask questions if needed.
 - Prefer `rg` instead of `ls -R` or `grep -R` for repository searches.
 - After committing changes, generate a pull request message using the `make_pr` tool.
+- For each task completion, estimate before and after parity percentages versus the retail Oblivion mod source base outlined in the Binary Ninja HLIL references.
 - **Read-only access to the `references/` directory tree.**

@@ -610,6 +610,45 @@ void fire_grenade2 (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int 
 	}
 }
 
+/*
+=================
+SP_grenade
+
+Spawn a grenade projectile from a map entity.
+=================
+*/
+void SP_grenade (edict_t *self)
+{
+	vec3_t	forward;
+	float	timer;
+	float	radius;
+	int		damage;
+	int		speed;
+
+	if (!self)
+		return;
+
+	if (self->speed <= 0)
+		self->speed = 600;
+	if (self->wait <= 0)
+		self->wait = 2.5f;
+	if (!self->dmg)
+		self->dmg = 120;
+
+	damage = self->dmg;
+	speed = (int)self->speed;
+	timer = self->wait;
+	if (self->dmg_radius > 0.0f)
+		radius = self->dmg_radius;
+	else
+		radius = (float)damage + 40.0f;
+
+	AngleVectors (self->s.angles, forward, NULL, NULL);
+	fire_grenade (&g_edicts[0], self->s.origin, forward, damage, speed, timer, radius);
+
+	G_FreeEdict (self);
+}
+
 
 /*
 =================
@@ -1517,11 +1556,11 @@ edict_t *fire_detpack (edict_t *self, vec3_t start, vec3_t aimdir, int damage, i
 	VectorCopy (start, charge->s.old_origin);
 	vectoangles (aimdir, charge->s.angles);
 	VectorScale (aimdir, speed, charge->velocity);
-	charge->movetype = MOVETYPE_BOUNCE;
+	charge->movetype = MOVETYPE_TOSS;
 	charge->clipmask = MASK_SHOT;
 	charge->solid = SOLID_BBOX;
-	VectorSet (charge->mins, -8, -8, 0);
-	VectorSet (charge->maxs, 8, 8, 16);
+	VectorClear (charge->mins);
+	VectorClear (charge->maxs);
 	charge->s.modelindex = gi.modelindex ("models/objects/detpack/tris.md2");
 	charge->s.effects = EF_GRENADE;
 	charge->owner = self;
@@ -1532,6 +1571,8 @@ edict_t *fire_detpack (edict_t *self, vec3_t start, vec3_t aimdir, int damage, i
 	charge->radius_dmg = damage;
 	charge->dmg_radius = damage_radius;
 	charge->classname = "detpack";
+	charge->health = 70;
+	charge->max_health = 70;
 	charge->takedamage = DAMAGE_YES;
 	charge->die = detpack_die;
 	charge->timestamp = level.time;
@@ -1540,6 +1581,40 @@ edict_t *fire_detpack (edict_t *self, vec3_t start, vec3_t aimdir, int damage, i
 	detpack_enforce_limit (charge);
 
 	return charge;
+}
+
+/*
+=============
+SP_detpack
+
+Spawn a detpack projectile from a map entity.
+=============
+*/
+void SP_detpack (edict_t *self)
+{
+	vec3_t	forward;
+	float	radius;
+	int		damage;
+	int		speed;
+
+	if (!self)
+		return;
+
+	if (self->speed <= 0)
+		self->speed = 400;
+	if (!self->dmg)
+		self->dmg = 240;
+	if (self->dmg_radius <= 0.0f)
+		self->dmg_radius = 200.0f;
+
+	damage = self->dmg;
+	speed = (int)self->speed;
+	radius = self->dmg_radius;
+
+	AngleVectors (self->s.angles, forward, NULL, NULL);
+	fire_detpack (&g_edicts[0], self->s.origin, forward, damage, speed, radius);
+
+	G_FreeEdict (self);
 }
 
 /*
@@ -1570,103 +1645,209 @@ void remote_detonator_trigger (edict_t *owner)
 	}
 }
 
+#define MAX_ACTIVE_MINES 5
+
+static void proximity_mine_explode (edict_t *self, edict_t *target);
+
+/*
+=============
+mine_enforce_limit
+
+Ensure a single owner cannot exceed the mine count cap from the HLIL logic.
+=============
+*/
+static void mine_enforce_limit (edict_t *mine)
+{
+	edict_t	*ent;
+	edict_t	*oldest;
+	int		count;
+	int		i;
+
+	if (!mine || !mine->owner)
+		return;
+
+	oldest = mine;
+	count = 0;
+
+	for (i = 1; i < globals.num_edicts; i++)
+	{
+		ent = &g_edicts[i];
+		if (!ent->inuse)
+			continue;
+		if (!ent->classname)
+			continue;
+		if (strcmp (ent->classname, "mine"))
+			continue;
+		if (ent->owner != mine->owner)
+			continue;
+
+		count++;
+
+		if ((ent != mine) && (oldest == mine || ent->timestamp < oldest->timestamp))
+			oldest = ent;
+	}
+
+	if (count > MAX_ACTIVE_MINES && oldest)
+		proximity_mine_explode (oldest, NULL);
+}
+
 static void proximity_mine_explode (edict_t *self, edict_t *target)
 {
-    if (target && target->takedamage)
-    {
-        vec3_t dir;
-        VectorSubtract (target->s.origin, self->s.origin, dir);
-        VectorNormalize (dir);
-        T_Damage (target, self, self->owner ? self->owner : self, dir, self->s.origin, vec3_origin, self->dmg, 0, DAMAGE_ENERGY, MOD_MINE);
-    }
+	if (target && target->takedamage)
+	{
+		vec3_t dir;
+		VectorSubtract (target->s.origin, self->s.origin, dir);
+		VectorNormalize (dir);
+		T_Damage (target, self, self->owner ? self->owner : self, dir, self->s.origin, vec3_origin, self->dmg, 0, DAMAGE_ENERGY, MOD_MINE);
+	}
 
-    gi.WriteByte (svc_temp_entity);
-    gi.WriteByte (TE_PLASMA_EXPLOSION);
-    gi.WritePosition (self->s.origin);
-    gi.multicast (self->s.origin, MULTICAST_PVS);
+	gi.WriteByte (svc_temp_entity);
+	gi.WriteByte (TE_PLASMA_EXPLOSION);
+	gi.WritePosition (self->s.origin);
+	gi.multicast (self->s.origin, MULTICAST_PVS);
 
-    if (self->dmg_radius > 0)
-        T_RadiusDamage (self, self->owner ? self->owner : self, self->radius_dmg, target, self->dmg_radius, MOD_MINE_SPLASH);
+	if (self->dmg_radius > 0)
+		T_RadiusDamage (self, self->owner ? self->owner : self, self->radius_dmg, target, self->dmg_radius, MOD_MINE_SPLASH);
 
-    G_FreeEdict (self);
+	G_FreeEdict (self);
+}
+
+/*
+=============
+proximity_mine_die
+
+Detonate the proximity mine when it is destroyed by damage.
+=============
+*/
+static void proximity_mine_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+{
+	(void)inflictor;
+	(void)damage;
+	(void)point;
+
+	proximity_mine_explode (self, attacker);
 }
 
 static void proximity_mine_think (edict_t *self)
 {
-    edict_t *ent;
+	edict_t *ent;
 
-    ent = NULL;
-    while ((ent = findradius (ent, self->s.origin, self->dmg_radius)) != NULL)
-    {
-        if (ent == self->owner)
-            continue;
-        if (!ent->takedamage)
-            continue;
-        if (!(ent->svflags & SVF_MONSTER) && !ent->client)
-            continue;
+	ent = NULL;
+	while ((ent = findradius (ent, self->s.origin, self->dmg_radius)) != NULL)
+	{
+		if (ent == self->owner)
+			continue;
+		if (!ent->takedamage)
+			continue;
+		if (!(ent->svflags & SVF_MONSTER) && !ent->client)
+			continue;
 
-        proximity_mine_explode (self, ent);
-        return;
-    }
+		proximity_mine_explode (self, ent);
+		return;
+	}
 
-    self->nextthink = level.time + 0.1f;
+	self->nextthink = level.time + 0.1f;
 }
 
 static void proximity_mine_arm (edict_t *self)
 {
-    self->think = proximity_mine_think;
-    self->nextthink = level.time + 0.1f;
+	self->think = proximity_mine_think;
+	self->nextthink = level.time + 0.1f;
 }
 
 static void proximity_mine_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
 {
-    if (other == self->owner)
-        return;
+	if (other == self->owner)
+		return;
 
-    if (surf && (surf->flags & SURF_SKY))
-    {
-        G_FreeEdict (self);
-        return;
-    }
+	if (surf && (surf->flags & SURF_SKY))
+	{
+		G_FreeEdict (self);
+		return;
+	}
 
-    if (!self->groundentity)
-    {
-        VectorClear (self->velocity);
-        VectorClear (self->avelocity);
-        self->movetype = MOVETYPE_NONE;
-        self->touch = NULL;
-        self->think = proximity_mine_arm;
-        self->nextthink = level.time + 0.2f;
-        self->groundentity = other;
-    }
+	if (!self->groundentity)
+	{
+		VectorClear (self->velocity);
+		VectorClear (self->avelocity);
+		self->movetype = MOVETYPE_NONE;
+		self->touch = NULL;
+		self->think = proximity_mine_arm;
+		self->nextthink = level.time + 0.2f;
+		self->groundentity = other;
+	}
 }
 
 edict_t *fire_proximity_mine (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, float damage_radius, int splash_damage)
 {
-    edict_t *mine;
+	edict_t *mine;
 
-    mine = G_Spawn ();
-    VectorCopy (start, mine->s.origin);
-    VectorCopy (start, mine->s.old_origin);
-    vectoangles (aimdir, mine->s.angles);
-    VectorScale (aimdir, speed, mine->velocity);
-    mine->movetype = MOVETYPE_BOUNCE;
-    mine->clipmask = MASK_SHOT;
-    mine->solid = SOLID_BBOX;
-    VectorSet (mine->mins, -8, -8, 0);
-    VectorSet (mine->maxs, 8, 8, 16);
-    mine->s.effects = EF_GRENADE;
-    mine->s.modelindex = gi.modelindex ("models/objects/laser/tris.md2");
-    mine->owner = self;
-    mine->touch = proximity_mine_touch;
-    mine->think = proximity_mine_arm;
-    mine->nextthink = level.time + 0.2f;
-    mine->dmg = damage;
-    mine->radius_dmg = splash_damage;
-    mine->dmg_radius = damage_radius;
-    mine->classname = "prox_mine";
+	mine = G_Spawn ();
+	VectorCopy (start, mine->s.origin);
+	VectorCopy (start, mine->s.old_origin);
+	vectoangles (aimdir, mine->s.angles);
+	VectorScale (aimdir, speed, mine->velocity);
+	mine->movetype = MOVETYPE_TOSS;
+	mine->clipmask = MASK_SHOT;
+	mine->solid = SOLID_BBOX;
+	VectorSet (mine->mins, -2, -2, -2);
+	VectorSet (mine->maxs, 2, 2, 2);
+	mine->s.effects = EF_GRENADE;
+	mine->s.modelindex = gi.modelindex ("models/objects/mine/tris.md2");
+	mine->owner = self;
+	mine->touch = proximity_mine_touch;
+	mine->think = proximity_mine_arm;
+	mine->nextthink = level.time + 0.2f;
+	mine->dmg = damage;
+	mine->radius_dmg = splash_damage;
+	mine->dmg_radius = damage_radius;
+	mine->classname = "mine";
+	mine->takedamage = DAMAGE_YES;
+	mine->health = 10;
+	mine->max_health = 10;
+	mine->die = proximity_mine_die;
+	mine->timestamp = level.time;
 
-    gi.linkentity (mine);
+	gi.linkentity (mine);
+	mine_enforce_limit (mine);
 
-    return mine;
+	return mine;
+}
+
+/*
+=============
+SP_mine
+
+Spawn a proximity mine projectile from a map entity.
+=============
+*/
+void SP_mine (edict_t *self)
+{
+	vec3_t	forward;
+	float	radius;
+	int		damage;
+	int		speed;
+	int		splash;
+
+	if (!self)
+		return;
+
+	if (self->speed <= 0)
+		self->speed = 600;
+	if (!self->dmg)
+		self->dmg = 150;
+	if (!self->radius_dmg)
+		self->radius_dmg = 100;
+	if (self->dmg_radius <= 0.0f)
+		self->dmg_radius = 180.0f;
+
+	damage = self->dmg;
+	speed = (int)self->speed;
+	splash = self->radius_dmg;
+	radius = self->dmg_radius;
+
+	AngleVectors (self->s.angles, forward, NULL, NULL);
+	fire_proximity_mine (&g_edicts[0], self->s.origin, forward, damage, speed, radius, splash);
+
+	G_FreeEdict (self);
 }

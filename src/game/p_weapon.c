@@ -1963,9 +1963,9 @@ static void Weapon_ProximityMines_Fire (edict_t *ent)
 {
 	vec3_t offset, start;
 	vec3_t forward, right;
-	int		damage = 90;
-	int		splash = 120;
-	float	radius = 160.0f;
+	int		damage = 150;
+	int		splash = 100;
+	float	radius = 180.0f;
 	edict_t *mine;
 
 	if (!((int)dmflags->value & DF_INFINITE_AMMO))

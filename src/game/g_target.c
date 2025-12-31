@@ -120,36 +120,17 @@ void SP_target_speaker (edict_t *ent)
 =============
 Use_Target_Help
 
-Broadcast mission/help messages to every client and update the HUD state.
+Update the help message strings for the HUD.
 =============
 */
 void Use_Target_Help (edict_t *ent, edict_t *other, edict_t *activator)
 {
 	const char *message = ent->message ? ent->message : "";
-	qboolean handled = Mission_TargetHelpFired (ent, activator);
 
-	if (!handled)
-	{
-		if (ent->spawnflags & 1)
-			strncpy (game.helpmessage1, message, sizeof(game.helpmessage1)-1);
-		else
-			strncpy (game.helpmessage2, message, sizeof(game.helpmessage2)-1);
-	}
-
-	if (message[0])
-	{
-		int i;
-
-		for (i = 1; i <= game.maxclients; i++)
-		{
-			edict_t *client = &g_edicts[i];
-
-			if (!client->inuse)
-				continue;
-
-			gi.cprintf (client, PRINT_HIGH, "%s\n", message);
-		}
-	}
+	if (ent->spawnflags & 1)
+		strncpy (game.helpmessage1, message, sizeof(game.helpmessage1)-1);
+	else
+		strncpy (game.helpmessage2, message, sizeof(game.helpmessage2)-1);
 
 	game.helpchanged++;
 }
@@ -165,26 +146,12 @@ void SP_target_help(edict_t *ent)
 		return;
 	}
 
-	if (!ent->message && (!ent->oblivion.mission_text || !ent->oblivion.mission_text[0]))
+	if (!ent->message)
 	{
 		gi.dprintf ("%s with no message at %s\n", ent->classname, vtos(ent->s.origin));
 		G_FreeEdict (ent);
 		return;
 	}
-
-	if (!ent->oblivion.mission_id && ent->targetname && ent->targetname[0])
-		ent->oblivion.mission_id = ent->targetname;
-
-	if (VectorCompare(ent->oblivion.mission_origin, vec3_origin))
-		VectorCopy(ent->s.origin, ent->oblivion.mission_origin);
-
-	if (VectorCompare(ent->oblivion.mission_angles, vec3_origin))
-		VectorCopy(ent->s.angles, ent->oblivion.mission_angles);
-
-	if (ent->oblivion.mission_timer_limit <= 0 && ent->wait > 0.0f)
-		ent->oblivion.mission_timer_limit = (int)floorf(ent->wait + 0.5f);
-
-	Mission_RegisterHelpTarget (ent);
 
 	ent->use = Use_Target_Help;
 }

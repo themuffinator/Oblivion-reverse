@@ -38,7 +38,7 @@ class SpawnManifestSnapshotTest(unittest.TestCase):
         )
         self.assertEqual(
             hlil_manifest["monster_jorg"].get("function"),
-            "sub_10001ac0",
+            "sub_10022100",
             "monster_jorg HLIL manifest entry does not match expected function",
         )
         self.assertIn(
@@ -100,15 +100,15 @@ class SpawnManifestSnapshotTest(unittest.TestCase):
         ]
         self.assertEqual(current, parity_expected)
 
-    def test_func_door_clears_start_open_bit(self) -> None:
+    def test_func_door_does_not_clear_start_open_bit(self) -> None:
         current, _ = self._extract_manifest()
         repo_manifest = current.get("combined", {}).get("repo", {})
         door_spawnflags = repo_manifest.get("func_door", {}).get("spawnflags", {})
         clears = door_spawnflags.get("clears", [])
-        self.assertIn(
+        self.assertNotIn(
             1,
             clears,
-            "func_door should clear spawnflag bit 0 (START_OPEN) to mirror retail behaviour",
+            "func_door should not clear spawnflag bit 0 (START_OPEN) to mirror retail behaviour",
         )
 
     def test_func_water_does_not_toggle_spawnflags(self) -> None:

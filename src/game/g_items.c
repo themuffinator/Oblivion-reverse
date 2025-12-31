@@ -1194,6 +1194,14 @@ void SpawnItem (edict_t *ent, gitem_t *item)
 {
 	PrecacheItem (item);
 
+#if !OBLIVION_ENABLE_WEAPON_LASERCANNON
+	if (ent->classname && !strcmp (ent->classname, "weapon_lasercannon"))
+	{
+		G_FreeEdict (ent);
+		return;
+	}
+#endif
+
 	if (ent->spawnflags)
 	{
 		if (strcmp(ent->classname, "key_power_cube") != 0)
@@ -2113,7 +2121,7 @@ always owned, never in the world
                 0,
                 NULL,
                 AMMO_MINES,
-/* precache */ "weapons/hgrent1a.wav weapons/hgrena1b.wav weapons/hgrenc1b.wav weapons/hgrenb1a.wav weapons/hgrenb2a.wav"
+/* precache */ "models/objects/mine/tris.md2 weapons/hgrent1a.wav weapons/hgrena1b.wav weapons/hgrenc1b.wav weapons/hgrenb1a.wav weapons/hgrenb2a.wav"
         },
 
 /*QUAKED ammo_detpack (.3 .3 1) (-16 -16 -16) (16 16 16)
@@ -2136,7 +2144,7 @@ always owned, never in the world
                 0,
                 NULL,
                 AMMO_DETPACK,
-/* precache */ "weapons/hgrent1a.wav weapons/hgrena1b.wav weapons/hgrenc1b.wav weapons/hgrenb1a.wav weapons/hgrenb2a.wav"
+/* precache */ "models/objects/detpack/tris.md2 weapons/hgrent1a.wav weapons/hgrena1b.wav weapons/hgrenc1b.wav weapons/hgrenb1a.wav weapons/hgrenb2a.wav"
         },
 
 /*QUAKED ammo_dod (.3 .3 1) (-16 -16 -16) (16 16 16)

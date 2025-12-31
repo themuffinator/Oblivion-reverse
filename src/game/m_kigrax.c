@@ -228,56 +228,7 @@ static int sound_pain;
 static int sound_pain_strong;
 static int sound_death;
 static int sound_attack;
-static void kigrax_attack_salvo (edict_t *self)
-{
-	if (!(self->monsterinfo.aiflags & AI_DUCKED))
-	{
-		kigrax_set_attack_hull (self, true);
-		self->monsterinfo.aiflags |= AI_HOLD_FRAME;
-		gi.sound (self, CHAN_WEAPON, sound_attack, 1.0f, ATTN_NORM, 0.0f);
-		self->count = 0;
-		self->timestamp = level.time;
-	}
 
-	if (!self->enemy)
-	{
-		kigrax_set_attack_hull (self, false);
-		self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
-		self->count = ARRAY_LEN(kigrax_salvo_yaw_offsets);
-		self->timestamp = 0.0f;
-		self->monsterinfo.nextframe = self->s.frame + 1;
-		kigrax_run_select (self);
-		return;
-	}
-
-	if ((self->monsterinfo.aiflags & AI_DUCKED) && self->count < ARRAY_LEN(kigrax_salvo_yaw_offsets))
-	{
-		while (self->count < ARRAY_LEN(kigrax_salvo_yaw_offsets) && level.time >= self->timestamp)
-		{
-			kigrax_fire_bolt (self, self->count);
-			self->count++;
-			self->timestamp += KIGRAX_SALVO_INTERVAL;
-		}
-
-		if (self->count < ARRAY_LEN(kigrax_salvo_yaw_offsets))
-		{
-			self->monsterinfo.aiflags |= AI_HOLD_FRAME;
-			return;
-		}
-
-		self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
-		self->monsterinfo.nextframe = self->s.frame + 1;
-	}
-
-	if (self->s.frame == KIGRAX_FRAME_ATTACK_END)
-	{
-		self->timestamp = 0.0f;
-		self->count = 0;
-		self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
-		kigrax_set_attack_hull (self, false);
-		kigrax_run_select (self);
-	}
-}
 /*
 =============
 kigrax_idle_select

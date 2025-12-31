@@ -2,8 +2,6 @@
 
 void InitTrigger (edict_t *self);
 
-#define CAMERA_SPAWN_FREEZE     1
-
 static void Camera_AttachAll(edict_t *self);
 static void Camera_DetachAll(edict_t *self);
 static void Camera_Stop(edict_t *self);
@@ -408,7 +406,6 @@ void SP_misc_camera(edict_t *self)
         self->solid = SOLID_NOT;
         self->svflags |= SVF_NOCLIENT;
 
-        cam->freeze_players = (self->spawnflags & CAMERA_SPAWN_FREEZE) != 0;
         cam->default_wait = (self->wait != 0) ? self->wait : 3.0f;
         cam->speed = (self->speed > 0) ? self->speed : 200.0f;
         cam->duration = self->duration;

@@ -109,6 +109,9 @@ void SP_target_string (edict_t *ent);
 
 void SP_worldspawn (edict_t *ent);
 void SP_viewthing (edict_t *ent);
+void SP_grenade (edict_t *self);
+void SP_detpack (edict_t *self);
+void SP_mine (edict_t *self);
 
 void SP_light (edict_t *self);
 void SP_light_mine1 (edict_t *ent);
@@ -247,6 +250,9 @@ spawn_t	spawns[] = {
 
 	{"worldspawn", SP_worldspawn},
 	{"viewthing", SP_viewthing},
+	{"grenade", SP_grenade},
+	{"detpack", SP_detpack},
+	{"mine", SP_mine},
 
 	{"light", SP_light},
 	{"light_mine1", SP_light_mine1},

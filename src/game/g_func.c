@@ -580,16 +580,14 @@ void SP_func_plat (edict_t *ent)
 
 //====================================================================
 
-/*QUAKED func_rotating (0 .5 .8) ? START_ON REVERSE X_AXIS Y_AXIS TOUCH_PAIN STOP ANIMATED ANIMATED_FAST
+/*QUAKED func_rotating (0 .5 .8) ? START_ON TOUCH_PAIN x ANIMATED ANIMATED_FAST x x x
 You need to have an origin brush as part of this entity.  The center of that brush will be
-the point around which it is rotated. It will rotate around the Z axis by default.  You can
-check either the X_AXIS or Y_AXIS box to change that.
+the point around which it is rotated.
 
 "speed" determines how fast it moves; default value is 100.
 "dmg"	damage to inflict when blocked (2 default)
 
-REVERSE will cause the it to rotate in the opposite direction.
-STOP mean it will stop moving instead of pushing entities
+TOUCH_PAIN will hurt players when the brush is moving.
 */
 
 void rotating_blocked (edict_t *self, edict_t *other)
@@ -615,7 +613,7 @@ void rotating_use (edict_t *self, edict_t *other, edict_t *activator)
 	{
 		self->s.sound = self->moveinfo.sound_middle;
 		VectorScale (self->movedir, self->speed, self->avelocity);
-		if (self->spawnflags & 16)
+		if (self->spawnflags & 2)
 			self->touch = rotating_touch;
 	}
 }
@@ -623,23 +621,10 @@ void rotating_use (edict_t *self, edict_t *other, edict_t *activator)
 void SP_func_rotating (edict_t *ent)
 {
 	ent->solid = SOLID_BSP;
-	if (ent->spawnflags & 32)
-		ent->movetype = MOVETYPE_STOP;
-	else
-		ent->movetype = MOVETYPE_PUSH;
+	ent->movetype = MOVETYPE_PUSH;
 
-	// set the axis of rotation
-	VectorClear(ent->movedir);
-	if (ent->spawnflags & 4)
-		ent->movedir[2] = 1.0;
-	else if (ent->spawnflags & 8)
-		ent->movedir[0] = 1.0;
-	else // Z_AXIS
-		ent->movedir[1] = 1.0;
-
-	// check for reverse rotation
-	if (ent->spawnflags & 2)
-		VectorNegate (ent->movedir, ent->movedir);
+	VectorClear (ent->movedir);
+	ent->movedir[1] = 1.0;
 
 	if (!ent->speed)
 		ent->speed = 100;
@@ -652,12 +637,28 @@ void SP_func_rotating (edict_t *ent)
 	if (ent->dmg)
 		ent->blocked = rotating_blocked;
 
+	if (ent->targetname)
+	{
+		edict_t *other;
+
+		for (other = g_edicts; other < &g_edicts[globals.num_edicts]; other++)
+		{
+			if (!other->target)
+				continue;
+			if (!Q_stricmp (other->target, ent->targetname))
+			{
+				ent->spawnflags |= 1;
+				break;
+			}
+		}
+	}
+
 	if (ent->spawnflags & 1)
 		ent->use (ent, NULL, NULL);
 
-	if (ent->spawnflags & 64)
+	if (ent->spawnflags & 8)
 		ent->s.effects |= EF_ANIM_ALL;
-	if (ent->spawnflags & 128)
+	if (ent->spawnflags & 16)
 		ent->s.effects |= EF_ANIM_ALLFAST;
 
 	gi.setmodel (ent, ent->model);
@@ -997,24 +998,6 @@ void Touch_DoorTrigger (edict_t *self, edict_t *other, cplane_t *plane, csurface
 
 /*
 =============
-Door_ClearStartOpenFlag
-
-Mirror the retail behaviour that drops the START_OPEN bit after the initial
-think so a door that loaded in the open position can still be forced to reopen
-on subsequent spawns. This clears bit 0 while leaving the initial position and
-area-portal state intact.
-=============
-*/
-void Door_ClearStartOpenFlag (edict_t *self)
-{
-	if (!(self->spawnflags & DOOR_START_OPEN))
-		return;
-
-	self->spawnflags &= 0xfffffffe;
-}
-
-/*
-=============
 Think_CalcMoveSpeed
 
 Calculate door timing so all members of a door team complete their move
@@ -1042,8 +1025,6 @@ void Think_CalcMoveSpeed (edict_t *self)
 			min = dist;
 	}
 
-	Door_ClearStartOpenFlag (self);
-
 	time = min / self->moveinfo.speed;
 
 	// adjust speeds so they will all complete at the same time
@@ -1068,8 +1049,7 @@ void Think_CalcMoveSpeed (edict_t *self)
 Think_SpawnDoorTrigger
 
 Spawn the trigger volume for automatic doors and mirror the retail
-start-open handling, including clearing bit 0 after the area portals have been
-opened.
+start-open handling with area portals.
 =============
 */
 void Think_SpawnDoorTrigger (edict_t *ent)
@@ -1107,9 +1087,6 @@ void Think_SpawnDoorTrigger (edict_t *ent)
 	if (ent->spawnflags & DOOR_START_OPEN)
 	{
 		door_use_areaportals (ent, true);
-		// Retail clears bit 0 so a Start Open door still forces a reopen after
-		// loading; mirror that here so the manifest records the mutation.
-		Door_ClearStartOpenFlag (ent);
 	}
 
 	Think_CalcMoveSpeed (ent);
@@ -1182,8 +1159,7 @@ void door_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *sur
 SP_func_door
 
 Spawn a linear brush door and queue its trigger setup. START_OPEN doors swap
-their endpoints here and clear the bit in Think_SpawnDoorTrigger so retail save
-loads still force the door to reopen.
+their endpoints here before the trigger is spawned.
 =============
 */
 void SP_func_door (edict_t *ent)
@@ -1430,7 +1406,7 @@ START_OPEN causes the water to move to its destination when spawned and operate 
 =============
 SP_func_water
 
-Configures a moveable water brush without mutating spawnflags beyond the retail behaviour.
+Configures a moveable water brush and mirrors retail spawnflag handling.
 =============
 */
 
@@ -1473,7 +1449,6 @@ void SP_func_water (edict_t *self)
 		VectorCopy (self->pos2, self->s.origin);
 		VectorCopy (self->pos1, self->pos2);
 		VectorCopy (self->s.origin, self->pos1);
-		Door_ClearStartOpenFlag (self);
 	}
 
 	VectorCopy (self->pos1, self->moveinfo.start_origin);
@@ -1502,18 +1477,20 @@ void SP_func_water (edict_t *self)
 #define TRAIN_START_ON		1
 #define TRAIN_TOGGLE		2
 #define TRAIN_BLOCK_STOPS	4
+#define TRAIN_EXPLOSIVE		8
 
-/*QUAKED func_train (0 .5 .8) ? START_ON TOGGLE BLOCK_STOPS
+/*QUAKED func_train (0 .5 .8) ? START_ON TOGGLE BLOCK_STOPS EXPLOSIVE
 Trains are moving platforms that players can ride.
 The targets origin specifies the min point of the train at each corner.
 The train spawns at the first target it is pointing at.
 If the train is the target of a button or trigger, it will not begin moving until activated.
 speed	default 100
-dmg		default	2
+dmg		default	20
 noise	looping sound to play when the train is in motion
 
 */
 void train_next (edict_t *self);
+void func_explosive_explode (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point);
 
 void train_blocked (edict_t *self, edict_t *other)
 {
@@ -1719,7 +1696,7 @@ void SP_func_train (edict_t *self)
 	else
 	{
 		if (!self->dmg)
-			self->dmg = 100;
+			self->dmg = 20;
 	}
 	self->solid = SOLID_BSP;
 	gi.setmodel (self, self->model);
@@ -1729,6 +1706,20 @@ void SP_func_train (edict_t *self)
 
 	if (!self->speed)
 		self->speed = 100;
+
+	if (self->spawnflags & TRAIN_EXPLOSIVE)
+	{
+		if (!self->health)
+			self->health = 100;
+		if (!self->count)
+			self->count = 10;
+		if (!self->dmg_radius)
+			self->dmg_radius = (float)(self->dmg * self->count + 40);
+		self->die = func_explosive_explode;
+		self->takedamage = DAMAGE_YES;
+		if (!self->mass)
+			self->mass = 75;
+	}
 
 	self->moveinfo.speed = self->speed;
 	self->moveinfo.accel = self->moveinfo.decel = self->moveinfo.speed;

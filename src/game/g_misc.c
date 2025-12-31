@@ -1050,8 +1050,17 @@ void func_explosive_explode (edict_t *self, edict_t *inflictor, edict_t *attacke
 
 	self->takedamage = DAMAGE_NO;
 
-	if (self->dmg)
-		T_RadiusDamage (self, attacker, self->dmg, NULL, self->dmg+40, MOD_EXPLOSIVE);
+	if (self->count)
+	{
+		int		radius_damage;
+		float	radius;
+
+		radius_damage = self->dmg * self->count;
+		radius = self->dmg_radius;
+		if (!radius)
+			radius = (float)(radius_damage + 40);
+		T_RadiusDamage (self, attacker, radius_damage, NULL, radius, MOD_EXPLOSIVE);
+	}
 
 	VectorSubtract (self->s.origin, inflictor->s.origin, self->velocity);
 	VectorNormalize (self->velocity);
@@ -1150,6 +1159,8 @@ void SP_func_explosive (edict_t *self)
 	{
 		if (!self->health)
 			self->health = 100;
+		if (!self->count)
+			self->count = 1;
 		self->die = func_explosive_explode;
 		self->takedamage = DAMAGE_YES;
 	}

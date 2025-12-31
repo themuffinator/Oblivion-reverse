@@ -5,10 +5,13 @@ from __future__ import annotations
 
 import argparse
 import ast
+import bisect
 import json
 import math
 import re
+import shutil
 import struct
+import subprocess
 import sys
 from collections import deque
 from dataclasses import dataclass, field
@@ -33,6 +36,18 @@ def _decode_float(value: int) -> float:
     return struct.unpack("<f", struct.pack("<I", value & 0xFFFFFFFF))[0]
 
 
+def _decode_double(value: int) -> float:
+    return struct.unpack("<d", struct.pack("<Q", value & 0xFFFFFFFFFFFFFFFF))[0]
+
+
+def _encode_float(value: float) -> int:
+    return struct.unpack("<I", struct.pack("<f", float(value)))[0]
+
+
+def _encode_double(value: float) -> int:
+    return struct.unpack("<Q", struct.pack("<d", float(value)))[0]
+
+
 @dataclass
 class FieldInfo:
     name: str
@@ -45,6 +60,10 @@ class FieldInfo:
 class HLILSpawnInfo:
     classname: str
     function: str
+    has_block: bool = False
+    block_source: str = "none"
+    spawnflags_source: str = "none"
+    defaults_source: str = "none"
     defaults: Dict[str, List[Dict[str, object]]] = field(default_factory=dict)
     spawnflags: Dict[str, List[int]] = field(default_factory=lambda: {
         "checks": [],
@@ -83,6 +102,13 @@ class BinarySection:
     raw_size: int
 
 
+@dataclass
+class XMMConstant:
+    float_value: Optional[float] = None
+    raw_bits: Optional[int] = None
+    width: int = 32
+
+
 # ----------------------------- HLIL parsing -----------------------------
 
 class HLILParser:
@@ -112,6 +138,8 @@ class HLILParser:
         self._spawn_table_records_cache: Optional[List[Dict[str, object]]] = None
         self._sub_1000b150_literals: Optional[Dict[str, Set[str]]] = None
         self._logged_spawn_entries_cache: Optional[Dict[str, Dict[str, object]]] = None
+        self._function_start_cache: Optional[Dict[str, int]] = None
+        self._sorted_function_starts: Optional[List[int]] = None
 
     # -- general helpers --
     def _resolve_binary_path(self) -> Optional[Path]:
@@ -136,12 +164,827 @@ class HLILParser:
             return False
         return True
 
+    def _parse_sub_address(self, name: str) -> Optional[int]:
+        match = re.match(r"sub_([0-9a-f]+)", name, re.IGNORECASE)
+        if not match:
+            return None
+        return int(match.group(1), 16)
+
+    def _function_start_addresses(self) -> Dict[str, int]:
+        if self._function_start_cache is None:
+            start_map: Dict[str, int] = {}
+            addr_pattern = re.compile(r"^(?:\d+:)?\s*(100[0-9a-f]+)\s", re.IGNORECASE)
+            for name, block in self.function_blocks.items():
+                if not block:
+                    continue
+                match = addr_pattern.match(block[0])
+                if not match:
+                    continue
+                start_map[name] = int(match.group(1), 16)
+            self._function_start_cache = start_map
+            self._sorted_function_starts = sorted(start_map.values())
+        return self._function_start_cache
+
+    def _next_function_address(self, address: int) -> Optional[int]:
+        self._function_start_addresses()
+        if not self._sorted_function_starts:
+            return None
+        idx = bisect.bisect_right(self._sorted_function_starts, address)
+        if idx >= len(self._sorted_function_starts):
+            return None
+        return self._sorted_function_starts[idx]
+
+    def _disassemble_range(self, start: int, stop: int) -> List[str]:
+        if not self._binary_path:
+            return []
+        tool = shutil.which("llvm-objdump")
+        if not tool:
+            return []
+        result = subprocess.run(
+            [
+                tool,
+                "-d",
+                f"--start-address=0x{start:x}",
+                f"--stop-address=0x{stop:x}",
+                str(self._binary_path),
+            ],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            return []
+        return result.stdout.splitlines()
+
+    def _parse_immediate(self, token: str) -> Optional[int]:
+        token = token.strip()
+        if not token.startswith("$"):
+            return None
+        value = token[1:]
+        if not value:
+            return None
+        base = 16 if value.lower().startswith("0x") else 10
+        try:
+            return int(value, base)
+        except ValueError:
+            return None
+
+    def _spawnflags_width_mask(self, mnemonic: str) -> int:
+        if mnemonic.endswith("b"):
+            return 0xFF
+        if mnemonic.endswith("w"):
+            return 0xFFFF
+        return 0xFFFFFFFF
+
+    def _parse_mem_operand_parts(
+        self, operand: str
+    ) -> Optional[Tuple[Optional[str], Optional[str], int, int]]:
+        operand = operand.strip()
+        if not operand:
+            return None
+        if "(" not in operand or ")" not in operand:
+            if re.match(r"^[-+]?(?:0x[0-9a-f]+|\d+)$", operand, re.IGNORECASE):
+                return None, None, 1, int(operand, 0)
+            return None
+        match = re.match(
+            r"^(?P<disp>[-+]?(?:0x[0-9a-f]+|\d+))?\((?P<base>%[a-z0-9]+)?(?:,(?P<index>%[a-z0-9]+))?(?:,(?P<scale>\d+))?\)$",
+            operand,
+            re.IGNORECASE,
+        )
+        if not match:
+            return None
+        disp_text = match.group("disp")
+        disp = int(disp_text, 0) if disp_text else 0
+        base_text = match.group("base") or ""
+        index_text = match.group("index") or ""
+        base_reg = self._register_base(base_text) if base_text else None
+        index_reg = self._register_base(index_text) if index_text else None
+        scale_text = match.group("scale")
+        scale = int(scale_text, 0) if scale_text else 1
+        return base_reg, index_reg, scale, disp
+
+    def _parse_mem_operand(self, operand: str) -> Optional[Tuple[str, int]]:
+        parts = self._parse_mem_operand_parts(operand)
+        if not parts:
+            return None
+        base_reg, index_reg, scale, disp = parts
+        if base_reg is None or index_reg is not None:
+            return None
+        return base_reg, disp
+
+    def _mem_operand_offset(
+        self,
+        operand: str,
+        self_bases: Dict[str, int],
+        reg_constants: Dict[str, int],
+    ) -> Optional[int]:
+        parts = self._parse_mem_operand_parts(operand)
+        if not parts:
+            return None
+        base_reg, index_reg, scale, disp = parts
+        if base_reg is None or base_reg not in self_bases:
+            return None
+        offset = self_bases[base_reg] + disp
+        if index_reg:
+            index_value = reg_constants.get(index_reg)
+            if index_value is None:
+                return None
+            offset += index_value * scale
+        return offset
+
+    def _mem_operand_address(
+        self, operand: str, reg_constants: Dict[str, int]
+    ) -> Optional[int]:
+        parts = self._parse_mem_operand_parts(operand)
+        if not parts:
+            return None
+        base_reg, index_reg, scale, disp = parts
+        address = disp
+        if base_reg:
+            base_value = reg_constants.get(base_reg)
+            if base_value is None:
+                return None
+            address += base_value
+        if index_reg:
+            index_value = reg_constants.get(index_reg)
+            if index_value is None:
+                return None
+            address += index_value * scale
+        return address
+
+    def _operand_is_spawnflags_mem(self, operand: str) -> bool:
+        return "0x11c(" in operand.lower()
+
+    def _register_base(self, operand: str) -> Optional[str]:
+        operand = operand.strip()
+        if not operand.startswith("%"):
+            return None
+        reg = operand[1:].lower()
+        aliases = {
+            "al": "eax",
+            "ah": "eax",
+            "ax": "eax",
+            "eax": "eax",
+            "bl": "ebx",
+            "bh": "ebx",
+            "bx": "ebx",
+            "ebx": "ebx",
+            "cl": "ecx",
+            "ch": "ecx",
+            "cx": "ecx",
+            "ecx": "ecx",
+            "dl": "edx",
+            "dh": "edx",
+            "dx": "edx",
+            "edx": "edx",
+            "esi": "esi",
+            "edi": "edi",
+            "ebp": "ebp",
+            "esp": "esp",
+        }
+        return aliases.get(reg)
+
+    def _xmm_register(self, operand: str) -> Optional[str]:
+        operand = operand.strip()
+        if not operand.startswith("%"):
+            return None
+        reg = operand[1:].lower()
+        if reg.startswith("xmm") and reg[3:].isdigit():
+            return reg
+        return None
+
+    def _disassemble_function(self, func_addr: int) -> List[str]:
+        if not self._load_binary_image():
+            return []
+        next_addr = self._next_function_address(func_addr)
+        stop_addr = func_addr + 0x400
+        if next_addr and next_addr > func_addr:
+            if next_addr - func_addr < 0x400:
+                stop_addr = next_addr
+        return self._disassemble_range(func_addr, stop_addr)
+
+    def _extract_spawnflags_from_disassembly(self, lines: List[str]) -> Dict[str, List[int]]:
+        checks: Set[int] = set()
+        sets: Set[int] = set()
+        clears: Set[int] = set()
+        assignments: Set[int] = set()
+        reg_spawnflags: Set[str] = set()
+        write_prefixes = (
+            "add",
+            "and",
+            "dec",
+            "imul",
+            "inc",
+            "lea",
+            "mov",
+            "neg",
+            "not",
+            "or",
+            "pop",
+            "rol",
+            "ror",
+            "sal",
+            "sar",
+            "shl",
+            "shr",
+            "sub",
+            "xchg",
+            "xor",
+        )
+        instr_pattern = re.compile(
+            r"^\s*[0-9a-f]+:\s+[0-9a-f ]+\s+(?P<mnemonic>[a-z]+)\s*(?P<ops>.*)$",
+            re.IGNORECASE,
+        )
+
+        for line in lines:
+            match = instr_pattern.match(line)
+            if not match:
+                continue
+            mnemonic = match.group("mnemonic").lower()
+            if mnemonic.startswith("ret"):
+                reg_spawnflags.clear()
+                continue
+            if mnemonic.startswith("call"):
+                reg_spawnflags.discard("eax")
+                reg_spawnflags.discard("ecx")
+                reg_spawnflags.discard("edx")
+                continue
+            ops = match.group("ops").strip()
+            operands = [op.strip() for op in ops.split(",") if op.strip()] if ops else []
+
+            if mnemonic.startswith("mov") and len(operands) >= 2:
+                src, dst = operands[0], operands[1]
+                dst_reg = self._register_base(dst)
+                if dst_reg:
+                    src_reg = self._register_base(src)
+                    if self._operand_is_spawnflags_mem(src):
+                        reg_spawnflags.add(dst_reg)
+                    elif src_reg and src_reg in reg_spawnflags:
+                        reg_spawnflags.add(dst_reg)
+                    else:
+                        reg_spawnflags.discard(dst_reg)
+                if self._operand_is_spawnflags_mem(dst):
+                    imm = self._parse_immediate(src)
+                    if imm is not None:
+                        mask = imm & self._spawnflags_width_mask(mnemonic)
+                        if mask:
+                            assignments.add(mask)
+
+            if mnemonic.startswith("test") and len(operands) >= 2:
+                imm = None
+                target = None
+                for op in operands:
+                    value = self._parse_immediate(op)
+                    if value is not None:
+                        imm = value
+                    else:
+                        target = op
+                if imm is not None and target is not None:
+                    mask = imm & self._spawnflags_width_mask(mnemonic)
+                    if mask:
+                        target_reg = self._register_base(target)
+                        if (target_reg and target_reg in reg_spawnflags) or self._operand_is_spawnflags_mem(target):
+                            checks.add(mask)
+
+            if (mnemonic.startswith("and") or mnemonic.startswith("or")) and len(operands) >= 2:
+                src, dst = operands[0], operands[1]
+                imm = self._parse_immediate(src)
+                if imm is None:
+                    continue
+                mask = imm & self._spawnflags_width_mask(mnemonic)
+                if not mask:
+                    continue
+                if self._operand_is_spawnflags_mem(dst):
+                    if mnemonic.startswith("or"):
+                        sets.add(mask)
+                    else:
+                        cleared = (~mask) & self._spawnflags_width_mask(mnemonic)
+                        if 0 < cleared < self._spawnflags_width_mask(mnemonic):
+                            clears.add(cleared)
+                else:
+                    dst_reg = self._register_base(dst)
+                    if dst_reg and dst_reg in reg_spawnflags and mnemonic.startswith("and"):
+                        checks.add(mask)
+
+            if any(mnemonic.startswith(prefix) for prefix in write_prefixes):
+                if operands:
+                    dst_reg = self._register_base(operands[-1])
+                    if dst_reg and not mnemonic.startswith("mov"):
+                        reg_spawnflags.discard(dst_reg)
+
+        return {
+            "checks": sorted(checks),
+            "sets": sorted(sets),
+            "clears": sorted(clears),
+            "assignments": sorted(assignments),
+        }
+
+    def _extract_spawnflags_from_binary(self, func_addr: int) -> Dict[str, List[int]]:
+        lines = self._disassemble_function(func_addr)
+        if not lines:
+            return {"checks": [], "sets": [], "clears": [], "assignments": []}
+        return self._extract_spawnflags_from_disassembly(lines)
+
+    def _extract_defaults_from_disassembly(
+        self, lines: List[str], fields: Dict[int, FieldInfo]
+    ) -> Dict[str, List[Dict[str, object]]]:
+        results: Dict[str, List[Dict[str, object]]] = {}
+        self_bases: Dict[str, int] = {}
+        reg_constants: Dict[str, int] = {}
+        fpu_stack: List[Optional[float]] = []
+        xmm_constants: Dict[str, XMMConstant] = {}
+        write_prefixes = (
+            "and",
+            "dec",
+            "imul",
+            "inc",
+            "neg",
+            "not",
+            "or",
+            "pop",
+            "rol",
+            "ror",
+            "sal",
+            "sar",
+            "shl",
+            "shr",
+            "xchg",
+            "xor",
+        )
+        instr_pattern = re.compile(
+            r"^\s*[0-9a-f]+:\s+[0-9a-f ]+\s+(?P<mnemonic>[a-z]+)\s*(?P<ops>.*)$",
+            re.IGNORECASE,
+        )
+
+        def record_default_value(offset: int, value: object, mask: Optional[int] = None) -> None:
+            if offset < 0:
+                return
+            field_info = fields.get(offset)
+            if not field_info or offset < 0x100:
+                field_name = f"offset_0x{offset:x}"
+            else:
+                field_name = field_info.name
+            if isinstance(value, float):
+                results.setdefault(field_name, []).append({"value": value, "offset": offset})
+                return
+            if not isinstance(value, int):
+                return
+            if mask is None:
+                mask = 0xFFFFFFFF
+            value &= mask
+            if field_info and field_info.type_id == 1:
+                value = _decode_float(value)
+            elif mask == 0xFFFFFFFF and value & 0x80000000:
+                value -= 0x100000000
+            results.setdefault(field_name, []).append({"value": value, "offset": offset})
+
+        def xmm_float_value(reg: str) -> Optional[float]:
+            constant = xmm_constants.get(reg)
+            if constant is None:
+                return None
+            if constant.float_value is not None:
+                return constant.float_value
+            if constant.raw_bits is None:
+                return None
+            if constant.width == 64:
+                return _decode_double(constant.raw_bits)
+            return _decode_float(constant.raw_bits)
+
+        def set_xmm_constant(
+            reg: str,
+            *,
+            float_value: Optional[float],
+            raw_bits: Optional[int],
+            width: int,
+        ) -> None:
+            xmm_constants[reg] = XMMConstant(
+                float_value=float_value,
+                raw_bits=raw_bits,
+                width=width,
+            )
+
+        def copy_xmm_constant(dst_reg: str, src_reg: str) -> None:
+            constant = xmm_constants.get(src_reg)
+            if constant is None:
+                xmm_constants.pop(dst_reg, None)
+                return
+            xmm_constants[dst_reg] = XMMConstant(
+                float_value=constant.float_value,
+                raw_bits=constant.raw_bits,
+                width=constant.width,
+            )
+
+        for idx, line in enumerate(lines):
+            match = instr_pattern.match(line)
+            if not match:
+                continue
+            mnemonic = match.group("mnemonic").lower()
+            if mnemonic.startswith("ret"):
+                self_bases.clear()
+                reg_constants.clear()
+                fpu_stack.clear()
+                xmm_constants.clear()
+                continue
+            if mnemonic.startswith("call"):
+                for reg in ("eax", "ecx", "edx"):
+                    self_bases.pop(reg, None)
+                    reg_constants.pop(reg, None)
+                fpu_stack.clear()
+                xmm_constants.clear()
+                continue
+
+            ops = match.group("ops").strip()
+            if "#" in ops:
+                ops = ops.split("#", 1)[0].strip()
+            operands = [op.strip() for op in ops.split(",") if op.strip()] if ops else []
+
+            for operand in operands:
+                parts = self._parse_mem_operand_parts(operand)
+                if not parts:
+                    continue
+                base_reg, index_reg, scale, disp = parts
+                if base_reg and disp == 0x11C:
+                    if index_reg is None or reg_constants.get(index_reg, 0) == 0:
+                        self_bases.setdefault(base_reg, 0)
+
+            src = operands[0] if len(operands) >= 1 else ""
+            dst = operands[1] if len(operands) >= 2 else ""
+            src_xmm = self._xmm_register(src) if src else None
+            dst_xmm = self._xmm_register(dst) if dst else None
+            if src_xmm or dst_xmm:
+                if mnemonic in ("xorps", "xorpd", "pxor"):
+                    if dst_xmm and src_xmm == dst_xmm:
+                        width = 64 if mnemonic in ("xorpd", "pxor") else 32
+                        set_xmm_constant(
+                            dst_xmm,
+                            float_value=0.0,
+                            raw_bits=0,
+                            width=width,
+                        )
+                    elif dst_xmm:
+                        xmm_constants.pop(dst_xmm, None)
+                    continue
+                if mnemonic in ("cvtsi2ss", "cvtsi2sd"):
+                    if dst_xmm:
+                        value = None
+                        src_reg = self._register_base(src)
+                        if src_reg and src_reg in reg_constants:
+                            value = float(reg_constants[src_reg])
+                        if value is not None:
+                            width = 64 if mnemonic == "cvtsi2sd" else 32
+                            raw_bits = (
+                                _encode_double(value)
+                                if width == 64
+                                else _encode_float(value)
+                            )
+                            set_xmm_constant(
+                                dst_xmm,
+                                float_value=value,
+                                raw_bits=raw_bits,
+                                width=width,
+                            )
+                        else:
+                            xmm_constants.pop(dst_xmm, None)
+                    continue
+                if mnemonic in ("cvtss2sd", "cvtsd2ss"):
+                    if dst_xmm:
+                        value = xmm_float_value(src_xmm) if src_xmm else None
+                        if value is not None:
+                            width = 64 if mnemonic == "cvtss2sd" else 32
+                            raw_bits = (
+                                _encode_double(value)
+                                if width == 64
+                                else _encode_float(value)
+                            )
+                            set_xmm_constant(
+                                dst_xmm,
+                                float_value=float(value),
+                                raw_bits=raw_bits,
+                                width=width,
+                            )
+                        else:
+                            xmm_constants.pop(dst_xmm, None)
+                    continue
+                if mnemonic in ("cvttss2si", "cvtss2si", "cvttsd2si", "cvtsd2si"):
+                    dst_reg = self._register_base(dst)
+                    if dst_reg:
+                        value = xmm_float_value(src_xmm) if src_xmm else None
+                        if value is not None:
+                            reg_constants[dst_reg] = int(value)
+                        else:
+                            reg_constants.pop(dst_reg, None)
+                    continue
+                if mnemonic in ("movss", "movsd"):
+                    if dst_xmm:
+                        value = None
+                        raw_bits = None
+                        if src_xmm:
+                            copy_xmm_constant(dst_xmm, src_xmm)
+                            continue
+                        else:
+                            address = self._mem_operand_address(src, reg_constants)
+                            if address is not None:
+                                if mnemonic == "movsd":
+                                    raw_bits = self._read_u64(address)
+                                    value = self._read_double(address)
+                                else:
+                                    raw_bits = self._read_u32(address)
+                                    value = self._read_float(address)
+                        if value is not None:
+                            width = 64 if mnemonic == "movsd" else 32
+                            set_xmm_constant(
+                                dst_xmm,
+                                float_value=float(value),
+                                raw_bits=raw_bits,
+                                width=width,
+                            )
+                        else:
+                            xmm_constants.pop(dst_xmm, None)
+                    elif src_xmm:
+                        offset = self._mem_operand_offset(dst, self_bases, reg_constants)
+                        if offset is not None:
+                            value = xmm_float_value(src_xmm)
+                            if value is not None:
+                                record_default_value(offset, float(value))
+                    continue
+                if mnemonic in ("movd", "movq"):
+                    width = 64 if mnemonic == "movq" else 32
+                    if dst_xmm:
+                        if src_xmm:
+                            copy_xmm_constant(dst_xmm, src_xmm)
+                        else:
+                            src_reg = self._register_base(src)
+                            if src_reg and src_reg in reg_constants:
+                                mask = 0xFFFFFFFFFFFFFFFF if width == 64 else 0xFFFFFFFF
+                                bits = reg_constants[src_reg] & mask
+                                value = _decode_double(bits) if width == 64 else _decode_float(bits)
+                                set_xmm_constant(
+                                    dst_xmm,
+                                    float_value=float(value),
+                                    raw_bits=bits,
+                                    width=width,
+                                )
+                            else:
+                                address = self._mem_operand_address(src, reg_constants)
+                                if address is not None:
+                                    bits = (
+                                        self._read_u64(address)
+                                        if width == 64
+                                        else self._read_u32(address)
+                                    )
+                                    if bits is not None:
+                                        value = (
+                                            _decode_double(bits)
+                                            if width == 64
+                                            else _decode_float(bits)
+                                        )
+                                        set_xmm_constant(
+                                            dst_xmm,
+                                            float_value=float(value),
+                                            raw_bits=bits,
+                                            width=width,
+                                        )
+                                    else:
+                                        xmm_constants.pop(dst_xmm, None)
+                                else:
+                                    xmm_constants.pop(dst_xmm, None)
+                        continue
+                    dst_reg = self._register_base(dst)
+                    if dst_reg and src_xmm:
+                        constant = xmm_constants.get(src_xmm)
+                        if constant:
+                            bits = constant.raw_bits
+                            if bits is None and constant.float_value is not None:
+                                bits = _encode_float(constant.float_value)
+                            if bits is not None:
+                                reg_constants[dst_reg] = bits & 0xFFFFFFFF
+                            else:
+                                reg_constants.pop(dst_reg, None)
+                        continue
+                    if src_xmm:
+                        offset = self._mem_operand_offset(dst, self_bases, reg_constants)
+                        if offset is not None:
+                            constant = xmm_constants.get(src_xmm)
+                            if constant:
+                                if width == 32:
+                                    bits = constant.raw_bits
+                                    if bits is None and constant.float_value is not None:
+                                        bits = _encode_float(constant.float_value)
+                                    if bits is not None:
+                                        record_default_value(offset, bits, 0xFFFFFFFF)
+                                else:
+                                    value = constant.float_value
+                                    if value is None and constant.raw_bits is not None:
+                                        value = _decode_double(constant.raw_bits)
+                                    if value is not None:
+                                        record_default_value(offset, float(value))
+                        continue
+                if mnemonic.startswith("mov") and dst_xmm:
+                    if src_xmm:
+                        copy_xmm_constant(dst_xmm, src_xmm)
+                    else:
+                        xmm_constants.pop(dst_xmm, None)
+                    continue
+                if dst_xmm:
+                    xmm_constants.pop(dst_xmm, None)
+                continue
+
+            if mnemonic in ("fld1", "fldz"):
+                fpu_stack.append(1.0 if mnemonic == "fld1" else 0.0)
+                continue
+            if mnemonic.startswith("fld") and operands:
+                value: Optional[float] = None
+                address = self._mem_operand_address(operands[0], reg_constants)
+                if address is not None:
+                    if mnemonic == "fldl":
+                        value = self._read_double(address)
+                    else:
+                        value = self._read_float(address)
+                fpu_stack.append(value)
+                continue
+            if mnemonic.startswith("fst") and operands and not mnemonic.startswith("fstsw"):
+                value = fpu_stack[-1] if fpu_stack else None
+                if mnemonic.endswith("p"):
+                    value = fpu_stack.pop() if fpu_stack else None
+                offset = self._mem_operand_offset(operands[0], self_bases, reg_constants)
+                if offset is not None and value is not None:
+                    record_default_value(offset, float(value))
+                continue
+
+            if mnemonic.startswith("xor") and len(operands) >= 2:
+                src_reg = self._register_base(operands[0])
+                dst_reg = self._register_base(operands[1])
+                if src_reg and dst_reg and src_reg == dst_reg:
+                    self_bases.pop(dst_reg, None)
+                    reg_constants[dst_reg] = 0
+                    continue
+
+            if mnemonic.startswith("sub") and len(operands) >= 2:
+                src_reg = self._register_base(operands[0])
+                dst_reg = self._register_base(operands[1])
+                if src_reg and dst_reg and src_reg == dst_reg:
+                    self_bases.pop(dst_reg, None)
+                    reg_constants[dst_reg] = 0
+                    continue
+
+            if mnemonic.startswith("add") and len(operands) >= 2:
+                src, dst = operands[0], operands[1]
+                dst_reg = self._register_base(dst)
+                if dst_reg:
+                    delta: Optional[int] = None
+                    src_imm = self._parse_immediate(src)
+                    if src_imm is not None:
+                        delta = src_imm
+                    else:
+                        src_reg = self._register_base(src)
+                        if src_reg and src_reg in reg_constants:
+                            delta = reg_constants[src_reg]
+                    if delta is not None:
+                        if dst_reg in self_bases:
+                            self_bases[dst_reg] += delta
+                        if dst_reg in reg_constants:
+                            reg_constants[dst_reg] = (
+                                reg_constants[dst_reg] + delta
+                            ) & self._spawnflags_width_mask(mnemonic)
+                        continue
+                    if dst_reg in self_bases or dst_reg in reg_constants:
+                        self_bases.pop(dst_reg, None)
+                        reg_constants.pop(dst_reg, None)
+                        continue
+
+            if mnemonic.startswith("sub") and len(operands) >= 2:
+                src, dst = operands[0], operands[1]
+                dst_reg = self._register_base(dst)
+                if dst_reg:
+                    delta = None
+                    src_imm = self._parse_immediate(src)
+                    if src_imm is not None:
+                        delta = -src_imm
+                    else:
+                        src_reg = self._register_base(src)
+                        if src_reg and src_reg in reg_constants:
+                            delta = -reg_constants[src_reg]
+                    if delta is not None:
+                        if dst_reg in self_bases:
+                            self_bases[dst_reg] += delta
+                        if dst_reg in reg_constants:
+                            reg_constants[dst_reg] = (
+                                reg_constants[dst_reg] + delta
+                            ) & self._spawnflags_width_mask(mnemonic)
+                        continue
+                    if dst_reg in self_bases or dst_reg in reg_constants:
+                        self_bases.pop(dst_reg, None)
+                        reg_constants.pop(dst_reg, None)
+                        continue
+
+            if mnemonic.startswith("mov") and len(operands) >= 2:
+                src, dst = operands[0], operands[1]
+                offset = self._mem_operand_offset(dst, self_bases, reg_constants)
+                if offset is not None:
+                    value: Optional[int] = None
+                    imm = self._parse_immediate(src)
+                    if imm is not None:
+                        value = imm
+                    else:
+                        src_reg = self._register_base(src)
+                        if src_reg and src_reg in reg_constants:
+                            value = reg_constants[src_reg]
+                    if value is not None:
+                        record_default_value(
+                            offset, value, self._spawnflags_width_mask(mnemonic)
+                        )
+
+                dst_reg = self._register_base(dst)
+                if dst_reg:
+                    src_reg = self._register_base(src)
+                    src_mem = self._parse_mem_operand_parts(src)
+                    if src_reg and src_reg in self_bases:
+                        self_bases[dst_reg] = self_bases[src_reg]
+                    elif src_mem and src_mem[0] in ("ebp", "esp") and src_mem[1] is None:
+                        base_reg, _, _, disp = src_mem
+                        if base_reg == "ebp" and disp >= 8:
+                            self_bases[dst_reg] = 0
+                        elif base_reg == "esp" and idx <= 80 and 4 <= disp <= 0x80:
+                            self_bases[dst_reg] = 0
+                        else:
+                            self_bases.pop(dst_reg, None)
+                    else:
+                        self_bases.pop(dst_reg, None)
+
+                    imm = self._parse_immediate(src)
+                    if imm is not None:
+                        reg_constants[dst_reg] = imm & self._spawnflags_width_mask(mnemonic)
+                    elif src_reg and src_reg in reg_constants:
+                        reg_constants[dst_reg] = reg_constants[src_reg]
+                    else:
+                        reg_constants.pop(dst_reg, None)
+
+            if mnemonic.startswith("lea") and len(operands) >= 2:
+                src, dst = operands[0], operands[1]
+                dst_reg = self._register_base(dst)
+                src_mem = self._parse_mem_operand_parts(src)
+                if dst_reg:
+                    if src_mem and src_mem[0] in self_bases:
+                        base_reg, index_reg, scale, disp = src_mem
+                        offset = self_bases[base_reg] + disp
+                        if index_reg:
+                            index_value = reg_constants.get(index_reg)
+                            if index_value is None:
+                                self_bases.pop(dst_reg, None)
+                            else:
+                                self_bases[dst_reg] = offset + index_value * scale
+                        else:
+                            self_bases[dst_reg] = offset
+                    else:
+                        self_bases.pop(dst_reg, None)
+                    reg_constants.pop(dst_reg, None)
+
+            if any(mnemonic.startswith(prefix) for prefix in write_prefixes):
+                if operands:
+                    dst_reg = self._register_base(operands[-1])
+                    if dst_reg and not mnemonic.startswith(("mov", "lea", "add", "sub")):
+                        self_bases.pop(dst_reg, None)
+                        reg_constants.pop(dst_reg, None)
+
+        return results
+
+    def _extract_defaults_from_binary(
+        self, func_addr: int, fields: Dict[int, FieldInfo]
+    ) -> Dict[str, List[Dict[str, object]]]:
+        lines = self._disassemble_function(func_addr)
+        if not lines:
+            return {}
+        return self._extract_defaults_from_disassembly(lines, fields)
+
+    def _match_function_decl(self, raw_line: str) -> Optional[str]:
+        decl_pattern = re.compile(
+            r"^(?:\d+:)?\s*100[0-9a-f]+\s+(?P<rest>.+)$", re.IGNORECASE
+        )
+        sub_pattern = re.compile(r"\b(sub_[0-9a-f]+)\s*\(", re.IGNORECASE)
+        type_pattern = re.compile(
+            r"\b(?:void|char|short|int|long|float|double|qboolean|size_t|uint\d+_t|int\d+_t)\b",
+            re.IGNORECASE,
+        )
+        match = decl_pattern.match(raw_line)
+        if not match:
+            return None
+        rest = match.group("rest").strip()
+        sub_match = sub_pattern.search(rest)
+        if not sub_match:
+            return None
+        prefix = rest[: sub_match.start()]
+        if not prefix.strip():
+            return None
+        if "=" in prefix or "return" in prefix:
+            return None
+        if "(" in prefix:
+            return None
+        if not type_pattern.search(prefix):
+            return None
+        return sub_match.group(1)
+
     @property
     def function_blocks(self) -> Dict[str, List[str]]:
         if self._function_blocks is None:
-            func_pattern = re.compile(
-                r"^(?:\d+:)?\s*100[0-9a-f]+\s+(?P<prefix>[^\s].*?)\b(sub_[0-9a-f]+)\("
-            )
             blocks: Dict[str, List[str]] = {}
 
             def append_block(name: str, new_lines: List[str]) -> None:
@@ -155,16 +998,11 @@ class HLILParser:
                 current_lines: List[str] = []
                 for raw_line in source.lines:
                     line = raw_line.strip()
-                    match = func_pattern.match(raw_line)
-                    if match:
-                        prefix = match.group("prefix")
-                        if "return" in prefix or "=" in prefix:
-                            if current_name is not None:
-                                current_lines.append(line)
-                            continue
+                    decl = self._match_function_decl(raw_line)
+                    if decl:
                         if current_name is not None:
                             append_block(current_name, current_lines)
-                        current_name = match.group(2)
+                        current_name = decl
                         current_lines = [line]
                     elif current_name is not None:
                         current_lines.append(line)
@@ -254,9 +1092,9 @@ class HLILParser:
                     if classname not in spawn_entries:
                         spawn_entries[classname] = func
 
-            for classname, func in self._spawn_entries_from_binary_tables().items():
-                if classname not in spawn_entries:
-                    spawn_entries[classname] = func
+            binary_entries = self._spawn_entries_from_binary_tables()
+            if binary_entries:
+                spawn_entries.update(binary_entries)
             item_entries = self._itemlist_entries()
             for classname in ("ammo_mines",):
                 if classname in item_entries and classname not in spawn_entries:
@@ -276,6 +1114,10 @@ class HLILParser:
             for classname, entry in self._logged_spawn_entries().items():
                 if classname not in spawn_entries or spawn_entries[classname] == "SpawnItemFromItemlist":
                     spawn_entries[classname] = entry["function"]
+
+            # Remove known non-spawn literals picked up by string/table scans.
+            for ignored in ("%s/listip.cfg", "j", "player_noise"):
+                spawn_entries.pop(ignored, None)
 
             self._spawn_map = spawn_entries
         return self._spawn_map
@@ -500,6 +1342,36 @@ class HLILParser:
             return data[offset:end].decode("ascii")
         except UnicodeDecodeError:
             return None
+
+    def _read_u32(self, address: int) -> Optional[int]:
+        if not self._load_binary_image() or self._binary_data is None:
+            return None
+        offset = self._va_to_file_offset(address)
+        if offset is None or offset + 4 > len(self._binary_data):
+            return None
+        return struct.unpack_from("<I", self._binary_data, offset)[0]
+
+    def _read_u64(self, address: int) -> Optional[int]:
+        if not self._load_binary_image() or self._binary_data is None:
+            return None
+        offset = self._va_to_file_offset(address)
+        if offset is None or offset + 8 > len(self._binary_data):
+            return None
+        return struct.unpack_from("<Q", self._binary_data, offset)[0]
+
+    def _read_float(self, address: int) -> Optional[float]:
+        value = self._read_u32(address)
+        if value is None:
+            return None
+        return _decode_float(value)
+
+    def _read_double(self, address: int) -> Optional[float]:
+        if not self._load_binary_image() or self._binary_data is None:
+            return None
+        offset = self._va_to_file_offset(address)
+        if offset is None or offset + 8 > len(self._binary_data):
+            return None
+        return struct.unpack_from("<d", self._binary_data, offset)[0]
 
     def _is_valid_function_address(self, address: int) -> bool:
         if not self._load_binary_image() or self._binary_sections is None:
@@ -762,9 +1634,9 @@ class HLILParser:
                 continue
             if stripped.startswith(("#", "//", "/*", "*", "*/")):
                 continue
-            match = sub_decl_pattern.search(candidate)
-            if match:
-                return match.group(1)
+            decl = self._match_function_decl(candidate)
+            if decl:
+                return decl
         return None
 
     def _extract_spawn_map_from_strcmp(self, block: List[str]) -> Dict[str, str]:
@@ -856,14 +1728,100 @@ class HLILParser:
             info = HLILSpawnInfo(classname=classname, function=func)
             block = func_blocks.get(func)
             if block:
+                info.has_block = True
+                info.block_source = "hlil"
                 info.defaults = self._extract_defaults(block, fields)
-                info.spawnflags = self._extract_spawnflags(block)
+                if info.defaults:
+                    info.defaults_source = "hlil"
+                if self._should_follow_helper_calls(classname):
+                    info.spawnflags = self._extract_spawnflags_with_helpers(func)
+                else:
+                    info.spawnflags = self._extract_spawnflags(block)
+                if any(info.spawnflags.values()):
+                    info.spawnflags_source = "hlil"
+            else:
+                addr = self._parse_sub_address(func)
+                if addr is not None:
+                    lines = self._disassemble_function(addr)
+                    if lines:
+                        info.has_block = True
+                        info.block_source = "binary"
+                        info.spawnflags = self._extract_spawnflags_from_disassembly(lines)
+                        if any(info.spawnflags.values()):
+                            info.spawnflags_source = "binary"
+                        info.defaults = self._extract_defaults_from_disassembly(lines, fields)
+                        if info.defaults:
+                            info.defaults_source = "binary"
             if not info.defaults and classname in self._itemlist_entries():
                 item_defaults = self._itemlist_defaults_for(classname)
                 if item_defaults:
                     info.defaults = item_defaults
+                    info.defaults_source = "itemlist"
+            if info.function == "SpawnItemFromItemlist" and info.block_source == "none":
+                info.has_block = True
+                info.block_source = "itemlist"
             manifest[classname] = info
         return manifest
+
+    def _should_follow_helper_calls(self, classname: str) -> bool:
+        if not classname:
+            return False
+        if classname == "light":
+            return True
+        prefixes = ("func_", "target_", "trigger_", "misc_", "info_", "path_", "point_")
+        return classname.startswith(prefixes)
+
+    def _merge_spawnflags(
+        self, first: Dict[str, List[int]], second: Dict[str, List[int]]
+    ) -> Dict[str, List[int]]:
+        merged: Dict[str, List[int]] = {}
+        keys = set(first) | set(second)
+        for key in keys:
+            merged[key] = sorted(set(first.get(key, [])) | set(second.get(key, [])))
+        return merged
+
+    def _direct_sub_calls(self, block: List[str]) -> Set[str]:
+        calls: Set[str] = set()
+        call_pattern = re.compile(r"\b(sub_[0-9a-f]+)\s*\(", re.IGNORECASE)
+        for line in block:
+            if self._match_function_decl(line):
+                continue
+            for match in call_pattern.finditer(line):
+                calls.add(match.group(1))
+        return calls
+
+    def _extract_spawnflags_with_helpers(self, func_name: str) -> Dict[str, List[int]]:
+        merged: Dict[str, List[int]] = {
+            "checks": [],
+            "sets": [],
+            "clears": [],
+            "assignments": [],
+        }
+        visited: Set[str] = set()
+
+        def walk(name: str, depth: int) -> None:
+            nonlocal merged
+            if name in visited:
+                return
+            visited.add(name)
+            block = self.function_blocks.get(name)
+            if not block:
+                return
+            merged = self._merge_spawnflags(merged, self._extract_spawnflags(block))
+            if depth >= 2:
+                return
+            for callee in self._direct_sub_calls(block):
+                if callee in visited:
+                    continue
+                callee_block = self.function_blocks.get(callee)
+                if not callee_block:
+                    continue
+                if not any("0x11c" in line for line in callee_block):
+                    continue
+                walk(callee, depth + 1)
+
+        walk(func_name, 0)
+        return merged
 
     def _itemlist_entries(self) -> Dict[str, Tuple[int, ...]]:
         if self._itemlist_cache is not None:
@@ -919,9 +1877,9 @@ class HLILParser:
         root = self.path.parent
         for source in self._sources:
             try:
-                rel_path = str(source.path.relative_to(root))
+                rel_path = source.path.relative_to(root).as_posix()
             except ValueError:
-                rel_path = str(source.path)
+                rel_path = source.path.as_posix()
             for line in source.lines:
                 for match in pattern.finditer(line):
                     literal = match.group(1)
@@ -1057,6 +2015,13 @@ class HLILParser:
         clears: Set[int] = set()
         assignments: Set[int] = set()
         alias_names: Set[str] = set()
+        def normalize_alias(name: str) -> str:
+            base = name
+            if ":" in base:
+                base = base.split(":", 1)[0]
+            if "." in base:
+                base = base.split(".", 1)[0]
+            return base
         alias_pattern = re.compile(
             r"(?P<lhs>[A-Za-z_][\w\.:]*)\s*=\s*(?:\(\*[^)]*0x11c[^)]*\)(?:\.\w+)?|\*[^;]*0x11c[^;]*)",
             re.IGNORECASE,
@@ -1074,6 +2039,9 @@ class HLILParser:
             re.IGNORECASE,
         )
         direct_or_pattern = re.compile(r"\|=\s*(0x[0-9a-f]+|\d+)", re.IGNORECASE)
+        direct_or_assign_pattern = re.compile(
+            r"=\s*[^;]*\|\s*(0x[0-9a-f]+|\d+)", re.IGNORECASE
+        )
         direct_and_pattern = re.compile(r"&=\s*(0x[0-9a-f]+|\d+)", re.IGNORECASE)
         alias_op_pattern = re.compile(
             r"(?P<alias>[A-Za-z_][\w\.:]*)\s*(?P<op>\|=|&=)\s*(0x[0-9a-f]+|\d+)",
@@ -1083,17 +2051,26 @@ class HLILParser:
             r"([A-Za-z_][\w\.:]*)\s*&\s*(0x[0-9a-f]+|\d+)",
             re.IGNORECASE,
         )
+        reverse_alias_check_pattern = re.compile(
+            r"(0x[0-9a-f]+|\d+)\s*&\s*([A-Za-z_][\w\.:]*)",
+            re.IGNORECASE,
+        )
 
         for line in block:
             if "0x11c" not in line:
                 continue
             for alias_match in alias_pattern.finditer(line):
-                alias_names.add(alias_match.group("lhs"))
+                if "==" in line or "!=" in line:
+                    continue
+                alias_names.add(normalize_alias(alias_match.group("lhs")))
             m_assign = direct_assign_pattern.search(line)
             if m_assign:
                 assignments.add(int(m_assign.group(1), 0))
             for m in direct_or_pattern.finditer(line):
                 sets.add(int(m.group(1), 0))
+            if "|=" not in line:
+                for m in direct_or_assign_pattern.finditer(line):
+                    sets.add(int(m.group(1), 0))
             for m in direct_and_pattern.finditer(line):
                 mask = int(m.group(1), 0) & 0xFFFFFFFF
                 cleared = (~mask) & 0xFFFFFFFF
@@ -1110,7 +2087,7 @@ class HLILParser:
 
         for line in block:
             for m in alias_op_pattern.finditer(line):
-                alias = m.group("alias")
+                alias = normalize_alias(m.group("alias"))
                 value = int(m.group(3), 0)
                 if alias not in alias_names:
                     continue
@@ -1122,10 +2099,15 @@ class HLILParser:
                     if 0 < cleared < 0xFFFFFFFF:
                         clears.add(cleared)
             for m in alias_check_pattern.finditer(line):
-                alias = m.group(1)
+                alias = normalize_alias(m.group(1))
                 if alias not in alias_names:
                     continue
                 checks.add(int(m.group(2), 0))
+            for m in reverse_alias_check_pattern.finditer(line):
+                alias = normalize_alias(m.group(2))
+                if alias not in alias_names:
+                    continue
+                checks.add(int(m.group(1), 0))
 
         return {
             "checks": sorted(checks),
@@ -1228,6 +2210,20 @@ class RepoParser:
         self.macro_resolver = MacroResolver(self.source_files, overrides=macro_overrides)
         self.spawn_map = self._parse_spawn_map()
         self.functions = self._parse_functions()
+        self._function_cache: Dict[str, Optional[List[str]]] = {}
+        self._call_blacklist = {
+            "if",
+            "for",
+            "while",
+            "switch",
+            "return",
+            "sizeof",
+            "do",
+            "case",
+            "goto",
+            "break",
+            "continue",
+        }
 
     def _parse_spawn_map(self) -> Dict[str, str]:
         spawn_map: Dict[str, str] = {}
@@ -1270,6 +2266,9 @@ class RepoParser:
             return set()
         block = text[brace_start:brace_end]
         classnames = set(re.findall(r"\{\s*\"([^\"]+)\"\s*,", block))
+        lasercannon_flag = self.macro_resolver.evaluate("OBLIVION_ENABLE_WEAPON_LASERCANNON")
+        if lasercannon_flag is not None and lasercannon_flag == 0:
+            classnames.discard("weapon_lasercannon")
         return classnames
 
     def _parse_functions(self) -> Dict[str, List[str]]:
@@ -1284,6 +2283,8 @@ class RepoParser:
                 if current_name is None:
                     match = func_pattern.match(line)
                     if match:
+                        if line.strip().endswith(";"):
+                            continue
                         current_name = match.group(1)
                         brace_stack = []
                         if "{" in line:
@@ -1306,6 +2307,9 @@ class RepoParser:
         return functions
 
     def _get_function_lines(self, name: str) -> Optional[List[str]]:
+        cached = self._function_cache.get(name)
+        if name in self._function_cache:
+            return cached
         func_pattern = re.compile(rf"^\w[\w\s\*]*\b{name}\s*\(([^)]*)\)")
         brace_stack: List[str] = []
         current_lines: List[str] = []
@@ -1315,6 +2319,8 @@ class RepoParser:
                 if not current_lines:
                     match = func_pattern.match(line)
                     if match:
+                        if line.strip().endswith(";"):
+                            continue
                         current_lines.append(line)
                         brace_stack = ["{"] if "{" in line else []
                     continue
@@ -1327,8 +2333,84 @@ class RepoParser:
                         else:
                             brace_stack = []
                 if not brace_stack and line.strip().endswith("}"):
+                    self._function_cache[name] = current_lines
                     return current_lines
+        self._function_cache[name] = None
         return None
+
+    def _should_follow_helper_calls(self, classname: str) -> bool:
+        if not classname:
+            return False
+        if classname == "light":
+            return True
+        prefixes = ("func_", "target_", "trigger_", "misc_", "info_", "path_", "point_")
+        return classname.startswith(prefixes)
+
+    def _match_function_decl(self, line: str) -> bool:
+        decl_pattern = re.compile(
+            r"^\s*[A-Za-z_][\w\s\*]*\b[A-Za-z_][A-Za-z0-9_]*\s*\([^;]*\)\s*(\{|$)"
+        )
+        return bool(decl_pattern.match(line))
+
+    def _is_member_call(self, line: str, start: int) -> bool:
+        idx = start - 1
+        while idx >= 0 and line[idx].isspace():
+            idx -= 1
+        if idx >= 0 and line[idx] == ".":
+            return True
+        if idx >= 1 and line[idx - 1 : idx + 1] == "->":
+            return True
+        return False
+
+    def _direct_helper_calls(self, lines: List[str]) -> Set[str]:
+        calls: Set[str] = set()
+        call_pattern = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\(")
+        for line in lines:
+            if self._match_function_decl(line):
+                continue
+            if line.lstrip().startswith("#"):
+                continue
+            for match in call_pattern.finditer(line):
+                name = match.group(1)
+                if name in self._call_blacklist:
+                    continue
+                if self._is_member_call(line, match.start()):
+                    continue
+                calls.add(name)
+        return calls
+
+    def _extract_spawnflags_with_helpers(self, func_name: str) -> Dict[str, List[int]]:
+        merged: Dict[str, List[int]] = {
+            "checks": [],
+            "sets": [],
+            "clears": [],
+            "assignments": [],
+        }
+        visited: Set[str] = set()
+
+        def walk(name: str, depth: int) -> None:
+            nonlocal merged
+            if name in visited:
+                return
+            visited.add(name)
+            block = self._get_function_lines(name)
+            if not block:
+                return
+            merged = self._merge_spawnflags(merged, self._extract_spawnflags(block))
+            if depth >= 2:
+                return
+            for callee in self._direct_helper_calls(block):
+                if callee in visited:
+                    continue
+                callee_block = self._get_function_lines(callee)
+                if not callee_block:
+                    continue
+                if not any("spawnflags" in line for line in callee_block):
+                    continue
+                walk(callee, depth + 1)
+
+        walk(func_name, 0)
+        return merged
 
     def build_manifest(self) -> Dict[str, RepoSpawnInfo]:
         manifest: Dict[str, RepoSpawnInfo] = {}
@@ -1337,7 +2419,10 @@ class RepoParser:
             lines = self.functions.get(func)
             if lines:
                 info.defaults = self._extract_defaults(lines)
-                info.spawnflags = self._extract_spawnflags(lines)
+                if self._should_follow_helper_calls(classname):
+                    info.spawnflags = self._extract_spawnflags_with_helpers(func)
+                else:
+                    info.spawnflags = self._extract_spawnflags(lines)
                 if classname in {"func_door", "func_door_rotating", "func_door_secret"}:
                     merged: Dict[str, List[int]] = {}
                     for helper_name in (
@@ -1540,6 +2625,7 @@ class RepoParser:
 class ComparisonResult:
     missing_in_repo: List[str] = field(default_factory=list)
     missing_in_hlil: List[str] = field(default_factory=list)
+    hlil_missing_blocks: List[str] = field(default_factory=list)
     spawnflag_mismatches: Dict[str, Dict[str, Tuple[List[int], List[int]]]] = field(default_factory=dict)
     default_mismatches: Dict[str, Dict[str, Tuple[List[Dict[str, object]], Optional[float]]]] = field(default_factory=dict)
 
@@ -1552,17 +2638,23 @@ def compare_manifests(hlil: Dict[str, HLILSpawnInfo], repo: Dict[str, RepoSpawnI
     result.missing_in_hlil = sorted(repo_classnames - hlil_classnames)
 
     shared = sorted(hlil_classnames & repo_classnames)
+    result.hlil_missing_blocks = sorted(
+        classname for classname in shared if not hlil[classname].has_block
+    )
     for classname in shared:
         hl = hlil[classname]
         rp = repo[classname]
-        spawnflag_diff: Dict[str, Tuple[List[int], List[int]]] = {}
-        for key in ("checks", "sets", "clears", "assignments"):
-            hl_vals = sorted(set(hl.spawnflags.get(key, [])))
-            rp_vals = sorted(set(rp.spawnflags.get(key, [])))
-            if hl_vals != rp_vals:
-                spawnflag_diff[key] = (hl_vals, rp_vals)
-        if spawnflag_diff:
-            result.spawnflag_mismatches[classname] = spawnflag_diff
+        if rp.function == "SpawnItemFromItemlist":
+            continue
+        if hl.spawnflags_source != "none":
+            spawnflag_diff: Dict[str, Tuple[List[int], List[int]]] = {}
+            for key in ("checks", "sets", "clears", "assignments"):
+                hl_vals = sorted(set(hl.spawnflags.get(key, [])))
+                rp_vals = sorted(set(rp.spawnflags.get(key, [])))
+                if hl_vals != rp_vals:
+                    spawnflag_diff[key] = (hl_vals, rp_vals)
+            if spawnflag_diff:
+                result.spawnflag_mismatches[classname] = spawnflag_diff
 
         default_diff: Dict[str, Tuple[List[Dict[str, object]], Optional[float]]] = {}
         for field_name, entries in hl.defaults.items():
@@ -1636,7 +2728,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             classname: {
                 "function": info.function,
                 "defaults": info.defaults,
+                "defaults_source": info.defaults_source,
                 "spawnflags": info.spawnflags,
+                "spawnflags_source": info.spawnflags_source,
+                "block_source": info.block_source,
             }
             for classname, info in sorted(hlil_manifest.items())
         },
@@ -1658,6 +2753,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 {
                     "missing_in_repo": comparison.missing_in_repo,
                     "missing_in_hlil": comparison.missing_in_hlil,
+                    "hlil_missing_blocks": comparison.hlil_missing_blocks,
                     "spawnflag_mismatches": comparison.spawnflag_mismatches,
                     "default_mismatches": comparison.default_mismatches,
                 },
@@ -1672,6 +2768,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             "comparison": {
                 "missing_in_repo": comparison.missing_in_repo,
                 "missing_in_hlil": comparison.missing_in_hlil,
+                "hlil_missing_blocks": comparison.hlil_missing_blocks,
                 "spawnflag_mismatches": comparison.spawnflag_mismatches,
                 "default_mismatches": comparison.default_mismatches,
             },

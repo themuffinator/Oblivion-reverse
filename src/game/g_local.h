@@ -35,7 +35,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endif
 
 #ifndef OBLIVION_ENABLE_MONSTER_SENTINEL
-#define OBLIVION_ENABLE_MONSTER_SENTINEL 1
+#define OBLIVION_ENABLE_MONSTER_SENTINEL 0
+#endif
+
+#ifndef OBLIVION_ENABLE_WEAPON_LASERCANNON
+#define OBLIVION_ENABLE_WEAPON_LASERCANNON 0
 #endif
 
 struct edict_s;
@@ -373,9 +377,11 @@ typedef struct
         int                             timer_remaining;
         qboolean                primary;
         qboolean                persistent;
-        vec3_t                  origin;
-        vec3_t                  angles;
-        float                   radius;
+	vec3_t                  origin;
+	vec3_t                  angles;
+	vec3_t                  velocity;
+	float                   blend;
+	float                   radius;
 } mission_objective_save_t;
 
 #define MAX_MISSION_OBJECTIVES 8

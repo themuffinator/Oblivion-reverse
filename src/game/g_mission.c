@@ -399,11 +399,13 @@ static qboolean Mission_HandleObjectiveEvent (edict_t *ent, const char *id, miss
 
         Mission_SetObjectiveText (obj, ent);
 
-        obj->primary = (ent->oblivion.mission_timer_cooldown & MISSION_FLAG_PRIMARY) != 0;
-        obj->persistent = (ent->oblivion.mission_timer_cooldown & MISSION_FLAG_PERSISTENT) != 0;
-        VectorCopy (ent->oblivion.mission_origin, obj->origin);
-        VectorCopy (ent->oblivion.mission_angles, obj->angles);
-        obj->radius = ent->oblivion.mission_radius;
+	obj->primary = (ent->oblivion.mission_timer_cooldown & MISSION_FLAG_PRIMARY) != 0;
+	obj->persistent = (ent->oblivion.mission_timer_cooldown & MISSION_FLAG_PERSISTENT) != 0;
+	VectorCopy (ent->oblivion.mission_origin, obj->origin);
+	VectorCopy (ent->oblivion.mission_angles, obj->angles);
+	VectorCopy (ent->oblivion.mission_velocity, obj->velocity);
+	obj->blend = ent->oblivion.mission_blend;
+	obj->radius = ent->oblivion.mission_radius;
         obj->timer_limit = ent->oblivion.mission_timer_limit;
         if (obj->timer_limit < 0)
                 obj->timer_limit = 0;
