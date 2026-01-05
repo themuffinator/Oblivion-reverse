@@ -1,63 +1,108 @@
-# Oblivion Reverse Mod
+<div align="center">
+  <img src="docs/assets/banner.png" alt="Oblivion Reverse Banner" width="100%">
 
-## Overview
-Oblivion Reverse is a community-driven effort to reverse engineer and document the classic *Oblivion* Quake mod. This repository aggregates source code recreations, research notes, and tooling used to understand the original mod's behavior. The project aims to preserve the mod, provide educational insight into its inner workings, and enable future enhancements that remain faithful to the original gameplay experience.
+  # Oblivion Reverse
+  **Restoring the Legendary Quake II Mod**
 
-## Repository Structure
-- `src/` – Core reverse-engineered source code for the mod.
-- `pack/` – Asset packs and data extracted from the original release.
-- `docs/` – Project documentation, including research notes and design references.
-- `references/` – Collected reference material, such as decompiled scripts and technical analysis.
-- `CMakeLists.txt` – Build configuration for generating the mod binaries and tools.
+  [![License](https://img.shields.io/badge/License-GPLv2-blue.svg)](LICENSE)
+  [![Status](https://img.shields.io/badge/Status-In%20Development-orange.svg)]()
+  [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-lightgrey.svg)]()
 
-## Getting Started
+  <p align="center">
+    A community-driven reverse engineering project to preserve and enhance the seminal *Oblivion* mod for Quake II.
+    <br />
+    <a href="docs/"><strong>Explore the docs »</strong></a>
+    <br />
+    <br />
+    <a href="#getting-started">Getting Started</a>
+    ·
+    <a href="#features">Features</a>
+    ·
+    <a href="#contributing">Contributing</a>
+  </p>
+</div>
+
+---
+
+## 📖 Overview
+
+**Oblivion Reverse** is dedicated to the preservation and study of the classic *Oblivion* mod, originally released by Lethargy Software. By analyzing legacy binaries and reconstructing the source code, this project aims to:
+
+*   **Preserve** a piece of Quake II history in a compile-ready state.
+*   **Document** the unique AI, weapon systems, and mission scripting that defined the mod.
+*   **Enhance** the experience for modern source ports while respecting the original vision.
+
+## ✨ Features
+
+*   **Reconstructed AI**: Detailed recreations of the Cyborg, Spider, and other custom monsters.
+*   **Mission System**: Reverse-engineered logic for the complex objective-based gameplay.
+*   **Modern Build System**: CMake-based build configuration for easy cross-platform compilation.
+*   **Documentation**: Extensive notes on HLIL analysis and game mechanics.
+
+## 🚀 Getting Started
+
 ### Prerequisites
-- A C11-compatible C compiler (e.g., GCC, Clang, or MSVC) matching the CMake configuration.
-- CMake 3.16 or later.
-- Python 3.9+ for auxiliary tooling and scripts located in `docs/` and `references/`.
-- Git LFS for handling large binary assets in the `pack/` directory.
 
-### Cloning the Repository
-```bash
-git clone https://github.com/<your-account>/oblivion-reverse.git
-cd oblivion-reverse
-git submodule update --init --recursive
-```
+*   **Compiler**: C11-compatible (GCC, Clang, or MSVC).
+*   **Build Tool**: CMake 3.16+.
+*   **Assets**: Original Quake II game data (pak0.pak).
+*   **Tools**: Python 3.9+ (for dev scripts).
+*   **Git LFS**: Required for asset management.
 
-### Building the Project
-1. Create a build directory:
-   ```bash
-   cmake -S . -B build
-   ```
-   On Windows, Quake II expects a 32-bit Release `gamex86.dll`, so be sure to
-   configure CMake for a Win32 generator:
-   ```bash
-   cmake -S . -B build -A Win32
-   ```
-2. Configure the build:
-   ```bash
-   cmake --build build --config Release
-   ```
-3. The compiled binaries and tools will be located under `build/`.
+### Installation
 
-### Running the Mod
-1. Copy the generated binaries from `build/` into your Quake installation directory.
-2. Launch Quake with the following command-line options:
-   ```bash
-   quake -game oblivion
-   ```
-3. The mod should now load with the reverse-engineered content. Refer to the original documentation in `docs/` for gameplay details.
+1.  **Clone the Repository**
+    ```bash
+    git clone https://github.com/<your-account>/oblivion-reverse.git
+    cd oblivion-reverse
+    git submodule update --init --recursive
+    ```
 
-## Contributing
-Contributions are welcome. Please follow these guidelines:
-1. Fork the repository and create a new branch for your feature or bugfix.
-2. Adhere to the existing code style and add comments where necessary.
-3. Include tests or validation steps for code changes when possible.
-4. Submit a pull request describing the rationale behind your changes.
+2.  **Build the Mod**
+    ```bash
+    cmake -S . -B build -A Win32  # Windows (32-bit recommended for original Q2 compatibility)
+    cmake --build build --config Release
+    ```
 
-## Credits
-- Original *Oblivion* mod by Team Evolve. Official page: [https://www.celephais.net/oblivion/main.html](https://www.celephais.net/oblivion/main.html).
-- Reverse engineering, tooling, and documentation by the Oblivion Reverse community.
+3.  **Run**
+    Copy `gamex86.dll` (or `game.so`) to your Quake II `oblivion` directory and launch:
+    ```bash
+    quake2 +set game oblivion
+    ```
 
-## License
-This project is distributed under the terms of the license found in the [LICENSE](LICENSE) file. Ensure that any contributions comply with the project's licensing requirements.
+## 🏗️ Repository Structure
+
+| Directory | Description |
+| :--- | :--- |
+| `src/` | Core C source code for the game DLL. |
+| `pack/` | Game assets (models, sounds, maps). Managed via LFS. |
+| `docs/` | Research notes, analysis, and developer guides. |
+| `references/` | Decompiled scripts, original readmes, and helper tools. |
+
+## 🤝 Contributing
+
+We welcome contributions from the community!
+
+1.  Fork the Project
+2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4.  Push to the Branch (`git push origin feature/AmazingFeature`)
+5.  Open a Pull Request
+
+## 📜 Credits
+
+*   **Original Mod**: Copyright © 1998-1999 Lethargy Software, Inc. [Official Page](https://www.celephais.net/oblivion/main.html).
+*   **Reverse Engineering**: The Oblivion Reverse Community.
+*   **Special Thanks**:
+    *   **Konig Varorson** ([GitHub](https://github.com/Konig-Varorson)) - For invaluable monster recreations and feedback.
+    *   **Nicco** - For extensive testing and quality assurance.
+    *   **Yamagi & Q2PRO Teams** - For the modern foundations we build upon.
+
+## 📄 License
+
+Distributed under the GNU General Public License v2. See `LICENSE` for more information.
+
+---
+<div align="center">
+  <sub>Built with ❤️ by the Quake II Community</sub>
+</div>
