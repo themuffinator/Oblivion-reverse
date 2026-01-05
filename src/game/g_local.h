@@ -885,6 +885,7 @@ void monster_fire_railgun (edict_t *self, vec3_t start, vec3_t aimdir, int damag
 void monster_fire_bfg (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, int kick, float damage_radius, int flashtype);
 void M_droptofloor (edict_t *ent);
 void monster_think (edict_t *self);
+void monster_use (edict_t *self, edict_t *other, edict_t *activator);
 void walkmonster_start (edict_t *self);
 void swimmonster_start (edict_t *self);
 void flymonster_start (edict_t *self);

@@ -664,6 +664,34 @@ class HLILParser:
                         else:
                             xmm_constants.pop(dst_xmm, None)
                     continue
+                if mnemonic in ("cvtps2pd", "cvtpd2ps"):
+                    if dst_xmm:
+                        value = None
+                        if src_xmm:
+                            value = xmm_float_value(src_xmm)
+                        else:
+                            address = self._mem_operand_address(src, reg_constants)
+                            if address is not None:
+                                if mnemonic == "cvtpd2ps":
+                                    value = self._read_double(address)
+                                else:
+                                    value = self._read_float(address)
+                        if value is not None:
+                            width = 64 if mnemonic == "cvtps2pd" else 32
+                            raw_bits = (
+                                _encode_double(value)
+                                if width == 64
+                                else _encode_float(value)
+                            )
+                            set_xmm_constant(
+                                dst_xmm,
+                                float_value=float(value),
+                                raw_bits=raw_bits,
+                                width=width,
+                            )
+                        else:
+                            xmm_constants.pop(dst_xmm, None)
+                    continue
                 if mnemonic in ("cvttss2si", "cvtss2si", "cvttsd2si", "cvtsd2si"):
                     dst_reg = self._register_base(dst)
                     if dst_reg:
@@ -777,6 +805,34 @@ class HLILParser:
                                         value = _decode_double(constant.raw_bits)
                                     if value is not None:
                                         record_default_value(offset, float(value))
+                        continue
+                if mnemonic in ("movdqa", "movdqu"):
+                    if dst_xmm:
+                        if src_xmm:
+                            copy_xmm_constant(dst_xmm, src_xmm)
+                        else:
+                            address = self._mem_operand_address(src, reg_constants)
+                            if address is not None:
+                                bits = self._read_u32(address)
+                                if bits is not None:
+                                    value = _decode_float(bits)
+                                    set_xmm_constant(
+                                        dst_xmm,
+                                        float_value=float(value),
+                                        raw_bits=bits,
+                                        width=32,
+                                    )
+                                else:
+                                    xmm_constants.pop(dst_xmm, None)
+                            else:
+                                xmm_constants.pop(dst_xmm, None)
+                        continue
+                    if src_xmm:
+                        offset = self._mem_operand_offset(dst, self_bases, reg_constants)
+                        if offset is not None:
+                            value = xmm_float_value(src_xmm)
+                            if value is not None:
+                                record_default_value(offset, float(value))
                         continue
                 if mnemonic.startswith("mov") and dst_xmm:
                     if src_xmm:

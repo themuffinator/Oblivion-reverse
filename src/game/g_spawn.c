@@ -596,12 +596,15 @@ void SpawnEntities (char *mapname, char *entities, char *spawnpoint)
 
 	SaveClientData ();
 
-        gi.FreeTags (TAG_LEVEL);
+	gi.FreeTags (TAG_LEVEL);
 
-        memset (&level, 0, sizeof(level));
-        memset (g_edicts, 0, game.maxentities * sizeof (g_edicts[0]));
+	memset (&level, 0, sizeof(level));
+	memset (g_edicts, 0, game.maxentities * sizeof (g_edicts[0]));
+	level.sight_entity_framenum = -1;
+	level.sound_entity_framenum = -1;
+	level.sound2_entity_framenum = -1;
 
-        Mission_BeginLevel (mapname);
+	Mission_BeginLevel (mapname);
 
         strncpy (level.mapname, mapname, sizeof(level.mapname)-1);
         strncpy (game.spawnpoint, spawnpoint, sizeof(game.spawnpoint)-1);

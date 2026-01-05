@@ -64,7 +64,9 @@ static void kigrax_walk_select (edict_t *self);
 static void kigrax_run_select (edict_t *self);
 static void kigrax_attack_execute (edict_t *self);
 static void kigrax_attack_salvo (edict_t *self);
+static void kigrax_begin_pain_stagger (edict_t *self);
 static void kigrax_end_pain (edict_t *self);
+static void kigrax_spawn_debris (edict_t *self);
 static void kigrax_dead (edict_t *self);
 
 static const mframe_t kigrax_frames_pain_template[] = {
@@ -180,16 +182,16 @@ kigrax_seed_frames
 Populate a contiguous frame array with a shared AI routine and movement scale.
 =============
 */
-static void kigrax_seed_frames (mframe_t *frames, size_t frame_count, ai_function aifunc, float dist)
+static void kigrax_seed_frames (mframe_t *frames, size_t frame_count, void (*aifunc)(edict_t *self, float dist), float dist)
 {
-		size_t		index;
+	size_t		index;
 
-		for (index = 0; index < frame_count; index++)
-		{
-			frames[index].aifunc = aifunc;
-			frames[index].dist = dist;
-			frames[index].thinkfunc = NULL;
-		}
+	for (index = 0; index < frame_count; index++)
+	{
+		frames[index].aifunc = aifunc;
+		frames[index].dist = dist;
+		frames[index].thinkfunc = NULL;
+	}
 }
 
 /*
