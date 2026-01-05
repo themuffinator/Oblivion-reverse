@@ -9,7 +9,7 @@
   [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-lightgrey.svg)]()
 
   <p align="center">
-    A community-driven reverse engineering project to preserve and enhance the seminal *Oblivion* mod for Quake II.
+    A reverse engineering project to preserve and enhance the seminal <b>Oblivion extension pack</b> for Quake II.
     <br />
     <a href="docs/"><strong>Explore the docs »</strong></a>
     <br />
@@ -92,11 +92,9 @@ We welcome contributions from the community!
 ## 📜 Credits
 
 *   **Original Mod**: Copyright © 1998-1999 Lethargy Software, Inc. [Official Page](https://www.celephais.net/oblivion/main.html).
-*   **Reverse Engineering**: The Oblivion Reverse Community.
 *   **Special Thanks**:
     *   **Konig Varorson** ([GitHub](https://github.com/Konig-Varorson)) - For invaluable monster recreations and feedback.
-    *   **Nicco** - For extensive testing and quality assurance.
-    *   **Yamagi & Q2PRO Teams** - For the modern foundations we build upon.
+    *   **Nicco** - For extensive testing.
 
 ## 📄 License
 
