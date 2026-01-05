@@ -10,7 +10,6 @@ SPIDER
 #include "g_local.h"
 #include "g_oblivion_monster.h"
 
-
 // Frames inferred from Legacy definitions and Konig logic mapping
 enum {
   FRAME_stand1 = 0,

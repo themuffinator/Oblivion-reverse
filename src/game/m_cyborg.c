@@ -10,6 +10,7 @@ cyborg
 #include "g_local.h"
 #include "g_oblivion_monster.h"
 
+
 // Frame definitions inferred from Konig recreation and legacy defines
 // Legacy m_cyborg.c had:
 // STAND: 108 (0x6c) - 125 (0x7d)
