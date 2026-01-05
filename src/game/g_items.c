@@ -1587,6 +1587,52 @@ always owned, never in the world
 /* precache */ "weapons/hgrent1a.wav weapons/hgrena1b.wav weapons/hgrenc1b.wav weapons/hgrenb1a.wav weapons/hgrenb2a.wav "
 	},
 
+/*QUAKED ammo_detpack (.3 .3 1) (-16 -16 -16) (16 16 16)
+*/
+        {
+                "ammo_detpack",
+                Pickup_Ammo,
+                Use_Weapon,
+                Drop_Ammo,
+                Weapon_RemoteDetonator,
+                "misc/am_pkup.wav",
+                "models/items/ammo/detpack/tris.md2", 0,
+                "models/weapons/v_detpack/tris.md2",
+/* icon */              "a_detpack",
+/* pickup */    "Detonation Pack",
+/* width */             2,
+                1,
+                "Detonation Pack",
+                IT_AMMO|IT_WEAPON,
+                0,
+                NULL,
+                AMMO_DETPACK,
+/* precache */ "models/objects/detpack/tris.md2 weapons/hgrent1a.wav weapons/hgrena1b.wav weapons/hgrenc1b.wav weapons/hgrenb1a.wav weapons/hgrenb2a.wav models/weapons/v_detonator/tris.md2"
+        },
+
+/*QUAKED ammo_mines (.3 .3 1) (-16 -16 -16) (16 16 16)
+*/
+        {
+                "ammo_mines",
+                Pickup_Ammo,
+                Use_Weapon,
+                Drop_Ammo,
+                Weapon_ProximityMines,
+                "misc/am_pkup.wav",
+                "models/items/ammo/mines/tris.md2", 0,
+                "models/weapons/v_mine/tris.md2",
+/* icon */              "a_mines",
+/* pickup */    "Mines",
+/* width */             3,
+                1,
+                "Mines",
+                IT_AMMO|IT_WEAPON,
+                0,
+                NULL,
+                AMMO_MINES,
+/* precache */ "models/objects/mine/tris.md2 weapons/hgrent1a.wav weapons/hgrena1b.wav weapons/hgrenc1b.wav weapons/hgrenb1a.wav weapons/hgrenb2a.wav"
+        },
+
 /*QUAKED weapon_grenadelauncher (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
 	{
@@ -1632,6 +1678,29 @@ always owned, never in the world
 		0,
 /* precache */ "models/objects/rocket/tris.md2 weapons/rockfly.wav weapons/rocklf1a.wav weapons/rocklr1b.wav models/objects/debris2/tris.md2"
 	},
+
+/*QUAKED weapon_hellfury (.3 .3 1) (-16 -16 -16) (16 16 16)
+*/
+        {
+                "weapon_hellfury",
+                Pickup_Weapon,
+                Use_Weapon,
+                Drop_Weapon,
+                Weapon_Hellfury,
+                "misc/w_pkup.wav",
+                "models/weapons/g_hellfury/tris.md2", EF_ROTATE,
+                "models/weapons/v_hellfury/tris.md2",
+/* icon */              "w_hellfury",
+/* pickup */    "HellFury",
+                0,
+                4,
+                "Rockets",
+                IT_WEAPON|IT_STAY_COOP,
+                WEAP_HELLFURY,
+                NULL,
+                0,
+/* precache */ "models/objects/rocket/tris.md2 weapons/rockfly.wav weapons/rocklf1a.wav weapons/rocklr1b.wav models/objects/debris2/tris.md2"
+        },
 
 /*QUAKED weapon_hyperblaster (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
@@ -1701,6 +1770,125 @@ always owned, never in the world
 		0,
 /* precache */ "sprites/s_bfg1.sp2 sprites/s_bfg2.sp2 sprites/s_bfg3.sp2 weapons/bfg__f1y.wav weapons/bfg__l1a.wav weapons/bfg__x1b.wav weapons/bfg_hum.wav"
 	},
+
+/*QUAKED weapon_deatomizer (.3 .3 1) (-16 -16 -16) (16 16 16)
+*/
+        {
+                "weapon_deatomizer",
+                Pickup_Weapon,
+                Use_Weapon,
+                Drop_Weapon,
+                Weapon_Deatomizer,
+                "misc/w_pkup.wav",
+                "models/weapons/g_deatom/tris.md2", EF_ROTATE,
+                "models/weapons/v_deatom/tris.md2",
+/* icon */              "w_deatom",
+/* pickup */    "Deatomizer",
+                0,
+                1,
+                "Cells",
+                IT_WEAPON|IT_STAY_COOP,
+                WEAP_DEATOMIZER,
+                NULL,
+                0,
+/* precache */ "models/objects/deatom/tris.md2 deatom/dfire.wav deatom/dfly.wav deatom/dimpact.wav"
+        },
+
+/*QUAKED weapon_dod (.3 .3 1) (-16 -16 -16) (16 16 16)
+*/
+        {
+                "weapon_dod",
+                Pickup_Weapon,
+                Use_Weapon,
+                Drop_Weapon,
+                Weapon_DOD,
+                "misc/w_pkup.wav",
+                "models/weapons/g_dod/tris.md2", EF_ROTATE,
+                "models/weapons/v_DoD/tris.md2",
+/* icon */              "a_dod",
+/* pickup */    "DoD Launcher",
+                0,
+                1,
+                "DOD",
+                IT_WEAPON|IT_STAY_COOP,
+                WEAP_DONUT,
+                NULL,
+                0,
+/* precache */ "models/weapons/v_DoD/tris.md2 models/objects/dod/tris.md2 sound/dod/DoD_hum.wav sound/dod/DoD.wav"
+        },
+
+/*QUAKED weapon_plasma_rifle (.3 .3 1) (-16 -16 -16) (16 16 16)
+*/
+        {
+                "weapon_plasma_rifle",
+                Pickup_Weapon,
+                Use_Weapon,
+                Drop_Weapon,
+                Weapon_PlasmaRifle,
+                "misc/w_pkup.wav",
+                "models/weapons/g_plasma/tris.md2", EF_ROTATE,
+                "models/weapons/v_plasma/tris.md2",
+/* icon */              "w_plasma",
+/* pickup */    "Plasma Rifle",
+                0,
+                5,
+                "Rifle Plasma",
+                IT_WEAPON|IT_STAY_COOP,
+                WEAP_PLASMA_RIFLE,
+                NULL,
+                0,
+/* precache */ "sound/weapons/plasma2/fire.wav sound/weapons/plasma2/hit.wav"
+        },
+
+/*QUAKED weapon_lasercannon (.3 .3 1) (-16 -16 -16) (16 16 16)
+*/
+#if 0
+        {
+                "weapon_lasercannon",
+                Pickup_Weapon,
+                Use_Weapon,
+                Drop_Weapon,
+                Weapon_LaserCannon,
+                "misc/w_pkup.wav",
+                "models/weapons/g_laser/tris.md2", EF_ROTATE,
+                "models/weapons/v_laser/tris.md2",
+/* icon */              "w_bfg",
+/* pickup */    "Obliterator",
+                0,
+                3,
+                "Cells",
+                IT_WEAPON|IT_STAY_COOP,
+                WEAP_LASERCANNON,
+                NULL,
+                0,
+/* precache */ "models/objects/laser/tris.md2 weapons/hyprbu1a.wav weapons/hyprbl1a.wav weapons/hyprbf1a.wav weapons/hyprbd1a.wav misc/lasfly.wav"
+        },
+#endif
+
+/*QUAKED weapon_remote_detonator (.3 .3 1) (-16 -16 -16) (16 16 16)
+*/
+#if 0
+        {
+                "weapon_remote_detonator",
+                Pickup_Weapon,
+                Use_Weapon,
+                Drop_Weapon,
+                Weapon_RemoteDetonator,
+                "misc/w_pkup.wav",
+                NULL, 0,
+                "models/weapons/v_detonator/tris.md2",
+/* icon */              "w_detpack",
+/* pickup */    "Remote Detonator",
+                0,
+                0,
+                "Detonation Pack",
+                IT_WEAPON|IT_STAY_COOP,
+                WEAP_REMOTE_DETONATOR,
+                NULL,
+                0,
+/* precache */ ""
+        },
+#endif
 
 	//
 	// AMMO ITEMS
@@ -1821,332 +2009,6 @@ always owned, never in the world
 /* precache */ ""
 	},
 
-
-	//
-	// POWERUP ITEMS
-	//
-/*QUAKED item_quad (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
-	{
-		"item_quad", 
-		Pickup_Powerup,
-		Use_Quad,
-		Drop_General,
-		NULL,
-		"items/pkup.wav",
-		"models/items/quaddama/tris.md2", EF_ROTATE,
-		NULL,
-/* icon */		"p_quad",
-/* pickup */	"Quad Damage",
-/* width */		2,
-		60,
-		NULL,
-		IT_POWERUP,
-		0,
-		NULL,
-		0,
-/* precache */ "items/damage.wav items/damage2.wav items/damage3.wav"
-	},
-
-/*QUAKED item_invulnerability (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
-	{
-		"item_invulnerability",
-		Pickup_Powerup,
-		Use_Invulnerability,
-		Drop_General,
-		NULL,
-		"items/pkup.wav",
-		"models/items/invulner/tris.md2", EF_ROTATE,
-		NULL,
-/* icon */		"p_invulnerability",
-/* pickup */	"Invulnerability",
-/* width */		2,
-		300,
-		NULL,
-		IT_POWERUP,
-		0,
-		NULL,
-		0,
-/* precache */ "items/protect.wav items/protect2.wav items/protect4.wav"
-	},
-
-/*QUAKED item_silencer (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
-	{
-		"item_silencer",
-		Pickup_Powerup,
-		Use_Silencer,
-		Drop_General,
-		NULL,
-		"items/pkup.wav",
-		"models/items/silencer/tris.md2", EF_ROTATE,
-		NULL,
-/* icon */		"p_silencer",
-/* pickup */	"Silencer",
-/* width */		2,
-		60,
-		NULL,
-		IT_POWERUP,
-		0,
-		NULL,
-		0,
-/* precache */ ""
-	},
-
-/*QUAKED item_breather (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
-	{
-		"item_breather",
-		Pickup_Powerup,
-		Use_Breather,
-		Drop_General,
-		NULL,
-		"items/pkup.wav",
-		"models/items/breather/tris.md2", EF_ROTATE,
-		NULL,
-/* icon */		"p_rebreather",
-/* pickup */	"Rebreather",
-/* width */		2,
-		60,
-		NULL,
-		IT_STAY_COOP|IT_POWERUP,
-		0,
-		NULL,
-		0,
-/* precache */ "items/airout.wav"
-	},
-
-/*QUAKED item_enviro (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
-	{
-		"item_enviro",
-		Pickup_Powerup,
-		Use_Envirosuit,
-		Drop_General,
-		NULL,
-		"items/pkup.wav",
-		"models/items/enviro/tris.md2", EF_ROTATE,
-		NULL,
-/* icon */		"p_envirosuit",
-/* pickup */	"Environment Suit",
-/* width */		2,
-		60,
-		NULL,
-		IT_STAY_COOP|IT_POWERUP,
-		0,
-		NULL,
-		0,
-/* precache */ "items/airout.wav"
-	},
-
-
-/*QUAKED item_rtdu (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
-        {
-                "weapon_rtdu",
-                Pickup_RTDU,
-                rtdu_use,
-                Drop_RTDU,
-                NULL,
-                "misc/w_pkup.wav",
-                "models/objects/rtdu/rtdu.md2", 0,
-                NULL,
-/* icon */              "w_rtdu",
-/* pickup */    "RTDU",
-/* width */             1,
-                1,
-                NULL,
-                IT_STAY_COOP|IT_POWERUP,
-                0,
-                NULL,
-                0,
-/* precache */ "models/objects/rtdu/tripod.md2"
-        },
-/*QUAKED weapon_lasercannon (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
-        {
-                "weapon_lasercannon",
-                Pickup_Weapon,
-                Use_Weapon,
-                Drop_Weapon,
-                Weapon_LaserCannon,
-                "misc/w_pkup.wav",
-                "models/weapons/g_laser/tris.md2", EF_ROTATE,
-                "models/weapons/v_laser/tris.md2",
-/* icon */              "w_bfg",
-/* pickup */    "Obliterator",
-                0,
-                3,
-                "Cells",
-                IT_WEAPON|IT_STAY_COOP,
-                WEAP_LASERCANNON,
-                NULL,
-                0,
-/* precache */ "models/objects/laser/tris.md2 weapons/hyprbu1a.wav weapons/hyprbl1a.wav weapons/hyprbf1a.wav weapons/hyprbd1a.wav misc/lasfly.wav"
-        },
-/*QUAKED weapon_deatomizer (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
-        {
-                "weapon_deatomizer",
-                Pickup_Weapon,
-                Use_Weapon,
-                Drop_Weapon,
-                Weapon_Deatomizer,
-                "misc/w_pkup.wav",
-                "models/weapons/g_deatom/tris.md2", EF_ROTATE,
-                "models/weapons/v_deatom/tris.md2",
-/* icon */              "w_deatom",
-/* pickup */    "Deatomizer",
-                0,
-                1,
-                "Cells",
-                IT_WEAPON|IT_STAY_COOP,
-                WEAP_DEATOMIZER,
-                NULL,
-                0,
-/* precache */ "models/objects/deatom/tris.md2 deatom/dfire.wav deatom/dfly.wav deatom/dimpact.wav"
-        },
-
-/*QUAKED weapon_plasma_rifle (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
-        {
-                "weapon_plasma_rifle",
-                Pickup_Weapon,
-                Use_Weapon,
-                Drop_Weapon,
-                Weapon_PlasmaRifle,
-                "misc/w_pkup.wav",
-                "models/weapons/g_plasma/tris.md2", EF_ROTATE,
-                "models/weapons/v_plasma/tris.md2",
-/* icon */              "w_plasma",
-/* pickup */    "Plasma Rifle",
-                0,
-                5,
-                "Rifle Plasma",
-                IT_WEAPON|IT_STAY_COOP,
-                WEAP_PLASMA_RIFLE,
-                NULL,
-                0,
-/* precache */ "sound/weapons/plasma2/fire.wav sound/weapons/plasma2/hit.wav"
-        },
-
-/*QUAKED weapon_remote_detonator (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
-        {
-                "weapon_remote_detonator",
-                Pickup_Weapon,
-                Use_Weapon,
-                Drop_Weapon,
-                Weapon_RemoteDetonator,
-                "misc/w_pkup.wav",
-                NULL, 0,
-                "models/weapons/v_detonator/tris.md2",
-/* icon */              "w_detpack",
-/* pickup */    "Remote Detonator",
-                0,
-                0,
-                "Detonation Pack",
-                IT_WEAPON|IT_STAY_COOP,
-                WEAP_REMOTE_DETONATOR,
-                NULL,
-                0,
-/* precache */ ""
-        },
-
-
-/*QUAKED weapon_hellfury (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
-        {
-                "weapon_hellfury",
-                Pickup_Weapon,
-                Use_Weapon,
-                Drop_Weapon,
-                Weapon_Hellfury,
-                "misc/w_pkup.wav",
-                "models/weapons/g_hellfury/tris.md2", EF_ROTATE,
-                "models/weapons/v_hellfury/tris.md2",
-/* icon */              "w_hellfury",
-/* pickup */    "HellFury",
-                0,
-                4,
-                "Rockets",
-                IT_WEAPON|IT_STAY_COOP,
-                WEAP_HELLFURY,
-                NULL,
-                0,
-/* precache */ "models/objects/rocket/tris.md2 weapons/rockfly.wav weapons/rocklf1a.wav weapons/rocklr1b.wav models/objects/debris2/tris.md2"
-        },
-
-/*QUAKED weapon_dod (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
-        {
-                "weapon_dod",
-                Pickup_Weapon,
-                Use_Weapon,
-                Drop_Weapon,
-                Weapon_DOD,
-                "misc/w_pkup.wav",
-                "models/weapons/g_dod/tris.md2", EF_ROTATE,
-                "models/weapons/v_DoD/tris.md2",
-/* icon */              "a_dod",
-/* pickup */    "DoD Launcher",
-                0,
-                1,
-                "DOD",
-                IT_WEAPON|IT_STAY_COOP,
-                WEAP_DONUT,
-                NULL,
-                0,
-/* precache */ "models/weapons/v_DoD/tris.md2 models/objects/dod/tris.md2 sound/dod/DoD_hum.wav sound/dod/DoD.wav"
-        },
-
-/*QUAKED ammo_mines (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
-        {
-                "ammo_mines",
-                Pickup_Ammo,
-                Use_Weapon,
-                Drop_Ammo,
-                Weapon_ProximityMines,
-                "misc/am_pkup.wav",
-                "models/items/ammo/mines/tris.md2", 0,
-                "models/weapons/v_mine/tris.md2",
-/* icon */              "a_mines",
-/* pickup */    "Mines",
-/* width */             3,
-                1,
-                "Mines",
-                IT_AMMO|IT_WEAPON,
-                0,
-                NULL,
-                AMMO_MINES,
-/* precache */ "models/objects/mine/tris.md2 weapons/hgrent1a.wav weapons/hgrena1b.wav weapons/hgrenc1b.wav weapons/hgrenb1a.wav weapons/hgrenb2a.wav"
-        },
-
-/*QUAKED ammo_detpack (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
-        {
-                "ammo_detpack",
-                Pickup_Ammo,
-                Use_Weapon,
-                Drop_Ammo,
-                Weapon_RemoteDetonator,
-                "misc/am_pkup.wav",
-                "models/items/ammo/detpack/tris.md2", 0,
-                "models/weapons/v_detpack/tris.md2",
-/* icon */              "a_detpack",
-/* pickup */    "Detonation Pack",
-/* width */             2,
-                1,
-                "Detonation Pack",
-                IT_AMMO|IT_WEAPON,
-                0,
-                NULL,
-                AMMO_DETPACK,
-/* precache */ "models/objects/detpack/tris.md2 weapons/hgrent1a.wav weapons/hgrena1b.wav weapons/hgrenc1b.wav weapons/hgrenb1a.wav weapons/hgrenb2a.wav"
-        },
-
 /*QUAKED ammo_dod (.3 .3 1) (-16 -16 -16) (16 16 16)
 */
         {
@@ -2206,7 +2068,7 @@ always owned, never in the world
 /* icon */              "a_plasma2",
 /* pickup */    "Rifle Plasma",
 /* width */             3,
-                50,
+                100,
                 NULL,
                 IT_AMMO|IT_POWERUP,
                 0,
@@ -2239,417 +2101,3 @@ Special item that gives +2 to maximum health
 		0,
 /* precache */ ""
 	},
-
-/*QUAKED item_adrenaline (.3 .3 1) (-16 -16 -16) (16 16 16)
-gives +1 to maximum health
-*/
-	{
-		"item_adrenaline",
-		Pickup_Adrenaline,
-		NULL,
-		NULL,
-		NULL,
-		"items/pkup.wav",
-		"models/items/adrenal/tris.md2", EF_ROTATE,
-		NULL,
-/* icon */		"p_adrenaline",
-/* pickup */	"Adrenaline",
-/* width */		2,
-		60,
-		NULL,
-		0,
-		0,
-		NULL,
-		0,
-/* precache */ ""
-	},
-
-/*QUAKED item_bandolier (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
-	{
-		"item_bandolier",
-		Pickup_Bandolier,
-		NULL,
-		NULL,
-		NULL,
-		"items/pkup.wav",
-		"models/items/band/tris.md2", EF_ROTATE,
-		NULL,
-/* icon */		"p_bandolier",
-/* pickup */	"Bandolier",
-/* width */		2,
-		60,
-		NULL,
-		0,
-		0,
-		NULL,
-		0,
-/* precache */ ""
-	},
-
-/*QUAKED item_pack (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
-	{
-		"item_pack",
-		Pickup_Pack,
-		NULL,
-		NULL,
-		NULL,
-		"items/pkup.wav",
-		"models/items/pack/tris.md2", EF_ROTATE,
-		NULL,
-/* icon */		"i_pack",
-/* pickup */	"Ammo Pack",
-/* width */		2,
-		180,
-		NULL,
-		0,
-		0,
-		NULL,
-		0,
-/* precache */ ""
-	},
-
-	//
-	// KEYS
-	//
-/*QUAKED key_data_cd (0 .5 .8) (-16 -16 -16) (16 16 16)
-key for computer centers
-*/
-	{
-		"key_data_cd",
-		Pickup_Key,
-		NULL,
-		Drop_General,
-		NULL,
-		"items/pkup.wav",
-		"models/items/keys/data_cd/tris.md2", EF_ROTATE,
-		NULL,
-		"k_datacd",
-		"Data CD",
-		2,
-		0,
-		NULL,
-		IT_STAY_COOP|IT_KEY,
-		0,
-		NULL,
-		0,
-/* precache */ ""
-	},
-
-/*QUAKED key_power_cube (0 .5 .8) (-16 -16 -16) (16 16 16) TRIGGER_SPAWN NO_TOUCH
-warehouse circuits
-*/
-	{
-		"key_power_cube",
-		Pickup_Key,
-		NULL,
-		Drop_General,
-		NULL,
-		"items/pkup.wav",
-		"models/items/keys/power/tris.md2", EF_ROTATE,
-		NULL,
-		"k_powercube",
-		"Power Cube",
-		2,
-		0,
-		NULL,
-		IT_STAY_COOP|IT_KEY,
-		0,
-		NULL,
-		0,
-/* precache */ ""
-	},
-
-/*QUAKED key_pyramid (0 .5 .8) (-16 -16 -16) (16 16 16)
-key for the entrance of jail3
-*/
-	{
-		"key_pyramid",
-		Pickup_Key,
-		NULL,
-		Drop_General,
-		NULL,
-		"items/pkup.wav",
-		"models/items/keys/pyramid/tris.md2", EF_ROTATE,
-		NULL,
-		"k_pyramid",
-		"Pyramid Key",
-		2,
-		0,
-		NULL,
-		IT_STAY_COOP|IT_KEY,
-		0,
-		NULL,
-		0,
-/* precache */ ""
-	},
-
-/*QUAKED key_data_spinner (0 .5 .8) (-16 -16 -16) (16 16 16)
-key for the city computer
-*/
-	{
-		"key_data_spinner",
-		Pickup_Key,
-		NULL,
-		Drop_General,
-		NULL,
-		"items/pkup.wav",
-		"models/items/keys/spinner/tris.md2", EF_ROTATE,
-		NULL,
-		"k_dataspin",
-		"Data Spinner",
-		2,
-		0,
-		NULL,
-		IT_STAY_COOP|IT_KEY,
-		0,
-		NULL,
-		0,
-/* precache */ ""
-	},
-
-/*QUAKED key_pass (0 .5 .8) (-16 -16 -16) (16 16 16)
-security pass for the security level
-*/
-	{
-		"key_pass",
-		Pickup_Key,
-		NULL,
-		Drop_General,
-		NULL,
-		"items/pkup.wav",
-		"models/items/keys/pass/tris.md2", EF_ROTATE,
-		NULL,
-		"k_security",
-		"Security Pass",
-		2,
-		0,
-		NULL,
-		IT_STAY_COOP|IT_KEY,
-		0,
-		NULL,
-		0,
-/* precache */ ""
-	},
-
-/*QUAKED key_blue_key (0 .5 .8) (-16 -16 -16) (16 16 16)
-normal door key - blue
-*/
-	{
-		"key_blue_key",
-		Pickup_Key,
-		NULL,
-		Drop_General,
-		NULL,
-		"items/pkup.wav",
-		"models/items/keys/key/tris.md2", EF_ROTATE,
-		NULL,
-		"k_bluekey",
-		"Blue Key",
-		2,
-		0,
-		NULL,
-		IT_STAY_COOP|IT_KEY,
-		0,
-		NULL,
-		0,
-/* precache */ ""
-	},
-
-/*QUAKED key_red_key (0 .5 .8) (-16 -16 -16) (16 16 16)
-normal door key - red
-*/
-	{
-		"key_red_key",
-		Pickup_Key,
-		NULL,
-		Drop_General,
-		NULL,
-		"items/pkup.wav",
-		"models/items/keys/red_key/tris.md2", EF_ROTATE,
-		NULL,
-		"k_redkey",
-		"Red Key",
-		2,
-		0,
-		NULL,
-		IT_STAY_COOP|IT_KEY,
-		0,
-		NULL,
-		0,
-/* precache */ ""
-	},
-
-/*QUAKED key_commander_head (0 .5 .8) (-16 -16 -16) (16 16 16)
-tank commander's head
-*/
-	{
-		"key_commander_head",
-		Pickup_Key,
-		NULL,
-		Drop_General,
-		NULL,
-		"items/pkup.wav",
-		"models/monsters/commandr/head/tris.md2", EF_GIB,
-		NULL,
-/* icon */		"k_comhead",
-/* pickup */	"Commander's Head",
-/* width */		2,
-		0,
-		NULL,
-		IT_STAY_COOP|IT_KEY,
-		0,
-		NULL,
-		0,
-/* precache */ ""
-	},
-
-/*QUAKED key_airstrike_target (0 .5 .8) (-16 -16 -16) (16 16 16)
-tank commander's head
-*/
-	{
-		"key_airstrike_target",
-		Pickup_Key,
-		NULL,
-		Drop_General,
-		NULL,
-		"items/pkup.wav",
-		"models/items/keys/target/tris.md2", EF_ROTATE,
-		NULL,
-/* icon */		"i_airstrike",
-/* pickup */	"Airstrike Marker",
-/* width */		2,
-		0,
-		NULL,
-		IT_STAY_COOP|IT_KEY,
-		0,
-		NULL,
-		0,
-/* precache */ ""
-	},
-
-	{
-		NULL,
-		Pickup_Health,
-		NULL,
-		NULL,
-		NULL,
-		"items/pkup.wav",
-		NULL, 0,
-		NULL,
-/* icon */		"i_health",
-/* pickup */	"Health",
-/* width */		3,
-		0,
-		NULL,
-		0,
-		0,
-		NULL,
-		0,
-/* precache */ "items/s_health.wav items/n_health.wav items/l_health.wav items/m_health.wav"
-	},
-
-	// end of list marker
-	{NULL}
-};
-
-
-/*QUAKED item_health (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
-void SP_item_health (edict_t *self)
-{
-	if ( deathmatch->value && ((int)dmflags->value & DF_NO_HEALTH) )
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
-	self->model = "models/items/healing/medium/tris.md2";
-	self->count = 10;
-	SpawnItem (self, FindItem ("Health"));
-	gi.soundindex ("items/n_health.wav");
-}
-
-/*QUAKED item_health_small (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
-void SP_item_health_small (edict_t *self)
-{
-	if ( deathmatch->value && ((int)dmflags->value & DF_NO_HEALTH) )
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
-	self->model = "models/items/healing/stimpack/tris.md2";
-	self->count = 2;
-	SpawnItem (self, FindItem ("Health"));
-	self->style = HEALTH_IGNORE_MAX;
-	gi.soundindex ("items/s_health.wav");
-}
-
-/*QUAKED item_health_large (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
-void SP_item_health_large (edict_t *self)
-{
-	if ( deathmatch->value && ((int)dmflags->value & DF_NO_HEALTH) )
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
-	self->model = "models/items/healing/large/tris.md2";
-	self->count = 25;
-	SpawnItem (self, FindItem ("Health"));
-	gi.soundindex ("items/l_health.wav");
-}
-
-/*QUAKED item_health_mega (.3 .3 1) (-16 -16 -16) (16 16 16)
-*/
-void SP_item_health_mega (edict_t *self)
-{
-	if ( deathmatch->value && ((int)dmflags->value & DF_NO_HEALTH) )
-	{
-		G_FreeEdict (self);
-		return;
-	}
-
-	self->model = "models/items/mega_h/tris.md2";
-	self->count = 100;
-	SpawnItem (self, FindItem ("Health"));
-	gi.soundindex ("items/m_health.wav");
-	self->style = HEALTH_IGNORE_MAX|HEALTH_TIMED;
-}
-
-
-void InitItems (void)
-{
-	game.num_items = sizeof(itemlist)/sizeof(itemlist[0]) - 1;
-}
-
-
-
-/*
-===============
-SetItemNames
-
-Called by worldspawn
-===============
-*/
-void SetItemNames (void)
-{
-	int		i;
-	gitem_t	*it;
-
-	for (i=0 ; i<game.num_items ; i++)
-	{
-		it = &itemlist[i];
-		gi.configstring (CS_ITEMS+i, it->pickup_name);
-	}
-
-	jacket_armor_index = ITEM_INDEX(FindItem("Jacket Armor"));
-	combat_armor_index = ITEM_INDEX(FindItem("Combat Armor"));
-	body_armor_index   = ITEM_INDEX(FindItem("Body Armor"));
-	power_screen_index = ITEM_INDEX(FindItem("Power Screen"));
-	power_shield_index = ITEM_INDEX(FindItem("Power Shield"));
-}

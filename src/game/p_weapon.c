@@ -1566,7 +1566,7 @@ static void Weapon_Deatomizer_Fire (edict_t *ent)
 
         if (!((int)dmflags->value & DF_INFINITE_AMMO))
         {
-                if (!ent->client->ammo_index || ent->client->pers.inventory[ent->client->ammo_index] < 1)
+                if (!ent->client->ammo_index || ent->client->pers.inventory[ent->client->ammo_index] < 10)
                 {
                         ent->client->ps.gunframe++;
                         if (level.time >= ent->pain_debounce_time)
@@ -1594,11 +1594,13 @@ static void Weapon_Deatomizer_Fire (edict_t *ent)
         gi.WriteByte (MZ_HYPERBLASTER | is_silenced);
         gi.multicast (ent->s.origin, MULTICAST_PVS);
 
+        gi.sound (ent, CHAN_WEAPON, gi.soundindex ("deatom/dfire.wav"), 1, ATTN_NORM, 0);
+
         ent->client->ps.gunframe++;
         PlayerNoise(ent, start, PNOISE_WEAPON);
 
         if (!((int)dmflags->value & DF_INFINITE_AMMO))
-                ent->client->pers.inventory[ent->client->ammo_index]--;
+                ent->client->pers.inventory[ent->client->ammo_index] -= 10;
 }
 
 void Weapon_Deatomizer (edict_t *ent)
@@ -1697,8 +1699,6 @@ static void Weapon_PlasmaRifle_Fire (edict_t *ent)
 
         if (!((int)dmflags->value & DF_INFINITE_AMMO))
                 ent->client->pers.inventory[ent->client->ammo_index]--;
-
-        ent->client->plasma_rifle_next_regen = level.time + 2.0f;
 }
 
 void Weapon_PlasmaRifle (edict_t *ent)
@@ -1948,6 +1948,21 @@ void Weapon_RemoteDetonator (edict_t *ent)
 {
         static int      pause_frames[]  = {19, 32, 0};
         static int      fire_frames[]   = {5, 0};
+
+        int detpack_model = gi.modelindex("models/weapons/v_detpack/tris.md2");
+        int detonator_model = gi.modelindex("models/weapons/v_detonator/tris.md2");
+        qboolean has_charges = RemoteChargesAvailable(ent);
+        int desired_model = has_charges ? detonator_model : detpack_model;
+
+        if (ent->client->ps.gunindex != desired_model)
+        {
+                if (ent->client->weaponstate == WEAPON_READY || ent->client->weaponstate == WEAPON_ACTIVATING)
+                {
+                        ent->client->ps.gunindex = desired_model;
+                        ent->client->ps.gunframe = 0;
+                        ent->client->weaponstate = WEAPON_ACTIVATING;
+                }
+        }
 
         Weapon_Generic (ent, 4, 8, 52, 55, pause_frames, fire_frames, Weapon_RemoteDetonator_Fire);
 }
