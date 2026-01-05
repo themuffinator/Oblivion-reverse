@@ -143,6 +143,8 @@ void SP_misc_eastertank (edict_t *self);
 void SP_misc_easterchick (edict_t *self);
 void SP_misc_easterchick2 (edict_t *self);
 void SP_misc_screenfader (edict_t *self);
+void SP_misc_deatomizer_control (edict_t *self);
+void SP_misc_deatomizer_target (edict_t *self);
 
 void SP_monster_berserk (edict_t *self);
 void SP_monster_gladiator (edict_t *self);
@@ -286,6 +288,8 @@ spawn_t	spawns[] = {
 	{"misc_easterchick", SP_misc_easterchick},
 	{"misc_easterchick2", SP_misc_easterchick2},
 	{"misc_screenfader", SP_misc_screenfader},
+	{"misc_deatomizer_control", SP_misc_deatomizer_control},
+	{"misc_deatomizer_target", SP_misc_deatomizer_target},
 
 	{"monster_berserk", SP_monster_berserk},
 	{"monster_badass", SP_monster_badass},
