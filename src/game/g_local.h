@@ -68,18 +68,34 @@ typedef struct edict_oblivion_ext_s {
   char *custom_name;         // optional in-world display name for actor barks
   float custom_name_time;    // debounce timer for repeated chat broadcasts
 
-  int mission_timer_remaining; // seconds remaining before mission timeout
-  int mission_timer_limit;     // configured mission time limit (seconds)
-  int mission_timer_cooldown;  // mission flag bitmask from spawn data
-  int mission_state;           // next mission event to publish
-  vec3_t mission_origin;       // world-space mission marker
-  vec3_t mission_angles;       // mission marker orientation
-  vec3_t mission_velocity;     // mission marker velocity for moving targets
-  float mission_blend;         // HUD blend strength for mission markers
-  float mission_radius;        // mission trigger radius in world units
-  char *mission_id;            // mission objective identifier
-  char *mission_title;         // mission log title override
-  char *mission_text;          // mission log body text
+  union {
+    struct {
+      int mission_timer_remaining; // seconds remaining before mission timeout
+      int mission_timer_limit;     // configured mission time limit (seconds)
+      int mission_timer_cooldown;  // mission flag bitmask from spawn data
+      int mission_state;           // next mission event to publish
+      vec3_t mission_origin;       // world-space mission marker
+      vec3_t mission_angles;       // mission marker orientation
+      vec3_t mission_velocity;     // mission marker velocity for moving targets
+      float mission_blend;         // HUD blend strength for mission markers
+      float mission_radius;        // mission trigger radius in world units
+      char *mission_id;            // mission objective identifier
+      char *mission_title;         // mission log title override
+      char *mission_text;          // mission log body text
+    } mission;
+    struct {
+      float deatom_f_320;
+      float deatom_f_324;
+      float deatom_f_328;
+      float deatom_f_32c;
+      int deatom_state; // 0x330
+      vec3_t deatom_origin; // 0x334
+      vec3_t deatom_v_340;
+      float deatom_f_34c;
+      float deatom_f_350;
+      float deatom_f_354;
+    } deatom;
+  };
 
   float cyborg_anchor_time;     // wounded stand-ground release timer
   int cyborg_anchor_stage;      // highest wounded anchor stage applied
@@ -1286,18 +1302,27 @@ struct edict_s {
                              // them?
   float pain_debounce_time;
   float damage_debounce_time;
-  float fly_sound_debounce_time; // move to clientinfo
+  union {
+    float fly_sound_debounce_time; // move to clientinfo
+    edict_t *deatom_target_ent;
+  };
   float last_move_time;
 
   int health;
   int max_health;
   int gib_health;
-  int deadflag;
+  union {
+    int deadflag;
+    int (*deatom_func_1f4)(struct edict_s *ent);
+  };
   qboolean show_hostile;
 
   float powerarmor_time;
 
-  char *map; // target_changelevel
+  union {
+    char *map; // target_changelevel
+    int (*deatom_think)(struct edict_s *ent);
+  };
 
   int viewheight; // height above origin where eyesight is determined
   int takedamage;
