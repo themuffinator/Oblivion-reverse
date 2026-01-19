@@ -519,6 +519,13 @@ void SP_target_blaster (edict_t *self)
 
 //==========================================================
 
+/*
+=============
+target_rocket_fire
+
+Fire a rocket from the target entity.
+=============
+*/
 static void target_rocket_fire (edict_t *self)
 {
 	vec3_t	start;
@@ -535,6 +542,13 @@ static void target_rocket_fire (edict_t *self)
 	self->nextthink = 0;
 }
 
+/*
+=============
+target_rocket_use
+
+Schedule a rocket fire with optional delay/randomness.
+=============
+*/
 static void target_rocket_use (edict_t *self, edict_t *other, edict_t *activator)
 {
 	float	delay;
@@ -554,6 +568,13 @@ static void target_rocket_use (edict_t *self, edict_t *other, edict_t *activator
 	self->nextthink = level.time + delay;
 }
 
+/*
+=============
+SP_target_rocket
+
+Spawn a target_rocket entity.
+=============
+*/
 void SP_target_rocket (edict_t *self)
 {
 	self->use = target_rocket_use;
@@ -563,7 +584,7 @@ void SP_target_rocket (edict_t *self)
 	if (!self->speed)
 		self->speed = 650;
 	if (!self->dmg)
-		self->dmg = 100 + (int)(random() * 20.0f);
+		self->dmg = 100;
 	if (!self->count)
 		self->count = 120;
 	if (!self->dmg_radius)
