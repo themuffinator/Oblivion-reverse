@@ -156,7 +156,7 @@ qboolean Pickup_Weapon (edict_t *ent, edict_t *other)
 
 	if (other->client->pers.weapon != ent->item && 
 		(other->client->pers.inventory[index] == 1) &&
-		( !deathmatch->value || other->client->pers.weapon == FindItem("blaster") ) )
+		( !deathmatch->value || other->client->pers.weapon == FindItem("Plasma Pistol") ) )
 		other->client->newweapon = ent->item;
 
 	return true;
@@ -305,7 +305,7 @@ void NoAmmoWeaponChange (edict_t *ent)
 		ent->client->newweapon = FindItem ("shotgun");
 		return;
 	}
-	ent->client->newweapon = FindItem ("blaster");
+	ent->client->newweapon = FindItem ("Plasma Pistol");
 }
 
 static void Oblivion_UpdateWeaponRegen (edict_t *ent)
@@ -1556,101 +1556,134 @@ Oblivion weapons
 ======================================================================
 */
 
-static void Weapon_Deatomizer_Fire (edict_t *ent)
+/*
+=================
+Weapon_Deatomizer_Fire
+=================
+*/
+static void Weapon_Deatomizer_Fire(edict_t *ent)
 {
-        vec3_t  offset, start;
-        vec3_t  forward, right;
-        int             damage = 80;
-        int             splash = 40;
-        float   radius = 120.0f;
+	vec3_t	offset;
+	vec3_t	start;
+	vec3_t	forward;
+	vec3_t	right;
+	int		damage;
+	float	volume;
 
-        if (!((int)dmflags->value & DF_INFINITE_AMMO))
-        {
-                if (!ent->client->ammo_index || ent->client->pers.inventory[ent->client->ammo_index] < 10)
-                {
-                        ent->client->ps.gunframe++;
-                        if (level.time >= ent->pain_debounce_time)
-                        {
-                                gi.sound(ent, CHAN_VOICE, gi.soundindex("weapons/noammo.wav"), 1, ATTN_NORM, 0);
-                                ent->pain_debounce_time = level.time + 1;
-                        }
-                        return;
-                }
-        }
+	if (!((int)dmflags->value & DF_INFINITE_AMMO))
+	{
+		if (!ent->client->ammo_index ||
+			ent->client->pers.inventory[ent->client->ammo_index] < 10)
+		{
+			if (level.time >= ent->pain_debounce_time)
+			{
+				gi.sound(ent, CHAN_VOICE, gi.soundindex("weapons/noammo.wav"), 1,
+					ATTN_NORM, 0);
+				ent->pain_debounce_time = level.time + 1;
+			}
+			NoAmmoWeaponChange(ent);
+			return;
+		}
 
-        if (is_quad)
-        {
-                damage *= 4;
-                splash *= 4;
-        }
+		ent->client->pers.inventory[ent->client->ammo_index] -= 10;
+	}
 
-        AngleVectors (ent->client->v_angle, forward, right, NULL);
-        VectorSet(offset, 8, 8, ent->viewheight-8);
-        P_ProjectSource (ent->client, ent->s.origin, offset, forward, right, start);
-        fire_deatomizer (ent, start, forward, damage, 900, radius, splash);
+	if (deathmatch->value)
+		damage = (rand() % 30) + 90;
+	else
+		damage = (rand() % 80) + 120;
 
-        gi.WriteByte (svc_muzzleflash);
-        gi.WriteShort (ent-g_edicts);
-        gi.WriteByte (MZ_HYPERBLASTER | is_silenced);
-        gi.multicast (ent->s.origin, MULTICAST_PVS);
+	if (is_quad)
+		damage *= 4;
 
-        gi.sound (ent, CHAN_WEAPON, gi.soundindex ("deatom/dfire.wav"), 1, ATTN_NORM, 0);
+	AngleVectors(ent->client->v_angle, forward, right, NULL);
+	VectorSet(offset, 16, 8, ent->viewheight - 8);
+	P_ProjectSource(ent->client, ent->s.origin, offset, forward, right, start);
 
-        ent->client->ps.gunframe++;
-        PlayerNoise(ent, start, PNOISE_WEAPON);
+	VectorScale(forward, -2, ent->client->kick_origin);
+	ent->client->kick_angles[0] = -1;
 
-        if (!((int)dmflags->value & DF_INFINITE_AMMO))
-                ent->client->pers.inventory[ent->client->ammo_index] -= 10;
+	fire_deatom(ent, start, forward, damage, 1000);
+
+	gi.WriteByte(svc_muzzleflash);
+	gi.WriteShort(ent - g_edicts);
+	gi.WriteByte(MZ_RAILGUN | is_silenced);
+	gi.multicast(ent->s.origin, MULTICAST_PVS);
+
+	ent->client->ps.gunframe++;
+
+	volume = is_silenced ? 0.5f : 1.0f;
+	gi.sound(ent, CHAN_VOICE, gi.soundindex("deatom/dfire.wav"), volume,
+		ATTN_NORM, 0);
+
+	PlayerNoise(ent, start, PNOISE_WEAPON);
 }
 
-void Weapon_Deatomizer (edict_t *ent)
+/*
+=================
+Weapon_Deatomizer
+=================
+*/
+void Weapon_Deatomizer(edict_t *ent)
 {
-        static int      pause_frames[]  = {19, 32, 0};
-        static int      fire_frames[]   = {5, 0};
+	static int	pause_frames[] = {12, 0};
+	static int	fire_frames[] = {32, 0};
 
-        Weapon_Generic (ent, 4, 8, 52, 55, pause_frames, fire_frames, Weapon_Deatomizer_Fire);
+	Weapon_Generic(ent, 11, 21, 43, 49, pause_frames, fire_frames,
+		Weapon_Deatomizer_Fire);
 }
 
 static void Weapon_PlasmaPistol_Fire (edict_t *ent)
 {
-        vec3_t  offset, start;
-        vec3_t  forward, right;
-        int             damage = 30;
+	vec3_t	offset, start;
+	vec3_t	forward, right;
+	int		damage;
+	float	volume;
 
-        if (!((int)dmflags->value & DF_INFINITE_AMMO))
-        {
-                if (!ent->client->ammo_index || ent->client->pers.inventory[ent->client->ammo_index] < 1)
-                {
-                        ent->client->ps.gunframe++;
-                        if (level.time >= ent->pain_debounce_time)
-                        {
-                                gi.sound(ent, CHAN_VOICE, gi.soundindex("weapons/noammo.wav"), 1, ATTN_NORM, 0);
-                                ent->pain_debounce_time = level.time + 1;
-                        }
-                        return;
-                }
-        }
+	if (!((int)dmflags->value & DF_INFINITE_AMMO))
+	{
+		if (!ent->client->ammo_index || ent->client->pers.inventory[ent->client->ammo_index] < 1)
+		{
+			ent->client->ps.gunframe++;
+			if (level.time >= ent->pain_debounce_time)
+			{
+				gi.sound(ent, CHAN_VOICE, gi.soundindex("weapons/noammo.wav"), 1, ATTN_NORM, 0);
+				ent->pain_debounce_time = level.time + 1;
+			}
+			return;
+		}
+	}
 
-        if (is_quad)
-                damage *= 4;
+	if (deathmatch->value)
+		damage = 15;
+	else
+		damage = 10;
 
-        AngleVectors (ent->client->v_angle, forward, right, NULL);
-        VectorSet(offset, 8, 8, ent->viewheight-8);
-        P_ProjectSource (ent->client, ent->s.origin, offset, forward, right, start);
-        fire_plasma_pistol (ent, start, forward, damage, 1100);
+	if (is_quad)
+		damage *= 4;
 
-        gi.WriteByte (svc_muzzleflash);
-        gi.WriteShort (ent-g_edicts);
-        gi.WriteByte (MZ_BLASTER | is_silenced);
-        gi.multicast (ent->s.origin, MULTICAST_PVS);
+	AngleVectors (ent->client->v_angle, forward, right, NULL);
+	VectorSet(offset, 16, 8, ent->viewheight-8);
+	P_ProjectSource (ent->client, ent->s.origin, offset, forward, right, start);
 
-        ent->client->ps.gunframe++;
-        PlayerNoise(ent, start, PNOISE_WEAPON);
+	VectorScale (forward, -2, ent->client->kick_origin);
+	ent->client->kick_angles[0] = -1;
 
-        if (!((int)dmflags->value & DF_INFINITE_AMMO))
-                ent->client->pers.inventory[ent->client->ammo_index]--;
+	fire_plasma_bolt (ent, start, forward, damage, 2000, 0);
 
-        ent->client->plasma_pistol_next_regen = level.time + 1.5f;
+	gi.WriteByte (svc_muzzleflash);
+	gi.WriteShort (ent-g_edicts);
+	gi.WriteByte (MZ_BLASTER2 | is_silenced);
+	gi.multicast (ent->s.origin, MULTICAST_PVS);
+
+	PlayerNoise(ent, start, PNOISE_WEAPON);
+	ent->client->ps.gunframe++;
+
+	volume = is_silenced ? 0.5f : 1.0f;
+	gi.sound(ent, CHAN_VOICE, gi.soundindex("plasma1/fire.wav"), volume, ATTN_NORM, 0);
+
+	if (!((int)dmflags->value & DF_INFINITE_AMMO))
+		ent->client->pers.inventory[ent->client->ammo_index]--;
 }
 
 void Weapon_PlasmaPistol (edict_t *ent)
@@ -1663,42 +1696,55 @@ void Weapon_PlasmaPistol (edict_t *ent)
 
 static void Weapon_PlasmaRifle_Fire (edict_t *ent)
 {
-        vec3_t  offset, start;
-        vec3_t  forward, right;
-        int             damage = 45;
+	vec3_t	offset, start;
+	vec3_t	forward, right;
+	int		damage;
+	float	volume;
 
-        if (!((int)dmflags->value & DF_INFINITE_AMMO))
-        {
-                if (!ent->client->ammo_index || ent->client->pers.inventory[ent->client->ammo_index] < 1)
-                {
-                        ent->client->ps.gunframe++;
-                        if (level.time >= ent->pain_debounce_time)
-                        {
-                                gi.sound(ent, CHAN_VOICE, gi.soundindex("weapons/noammo.wav"), 1, ATTN_NORM, 0);
-                                ent->pain_debounce_time = level.time + 1;
-                        }
-                        return;
-                }
-        }
+	if (!((int)dmflags->value & DF_INFINITE_AMMO))
+	{
+		if (!ent->client->ammo_index || ent->client->pers.inventory[ent->client->ammo_index] < 5)
+		{
+			ent->client->ps.gunframe++;
+			if (level.time >= ent->pain_debounce_time)
+			{
+				gi.sound(ent, CHAN_VOICE, gi.soundindex("weapons/noammo.wav"), 1, ATTN_NORM, 0);
+				ent->pain_debounce_time = level.time + 1;
+			}
+			return;
+		}
+	}
 
-        if (is_quad)
-                damage *= 4;
+	if (deathmatch->value)
+		damage = 50;
+	else
+		damage = 35;
 
-        AngleVectors (ent->client->v_angle, forward, right, NULL);
-        VectorSet(offset, 8, 8, ent->viewheight-8);
-        P_ProjectSource (ent->client, ent->s.origin, offset, forward, right, start);
-        fire_plasma_rifle (ent, start, forward, damage, 1200);
+	if (is_quad)
+		damage *= 4;
 
-        gi.WriteByte (svc_muzzleflash);
-        gi.WriteShort (ent-g_edicts);
-        gi.WriteByte (MZ_HYPERBLASTER | is_silenced);
-        gi.multicast (ent->s.origin, MULTICAST_PVS);
+	AngleVectors (ent->client->v_angle, forward, right, NULL);
+	VectorSet(offset, 16, 8, ent->viewheight-8);
+	P_ProjectSource (ent->client, ent->s.origin, offset, forward, right, start);
 
-        ent->client->ps.gunframe++;
-        PlayerNoise(ent, start, PNOISE_WEAPON);
+	VectorScale (forward, -2, ent->client->kick_origin);
+	ent->client->kick_angles[0] = -1;
 
-        if (!((int)dmflags->value & DF_INFINITE_AMMO))
-                ent->client->pers.inventory[ent->client->ammo_index]--;
+	fire_plasma_bolt (ent, start, forward, damage, 2000, 1);
+
+	gi.WriteByte (svc_muzzleflash);
+	gi.WriteShort (ent-g_edicts);
+	gi.WriteByte (MZ_BLASTER2 | is_silenced);
+	gi.multicast (ent->s.origin, MULTICAST_PVS);
+
+	PlayerNoise(ent, start, PNOISE_WEAPON);
+	ent->client->ps.gunframe++;
+
+	volume = is_silenced ? 0.5f : 1.0f;
+	gi.sound(ent, CHAN_VOICE, gi.soundindex("plasma2/fire.wav"), volume, ATTN_NORM, 0);
+
+	if (!((int)dmflags->value & DF_INFINITE_AMMO))
+		ent->client->pers.inventory[ent->client->ammo_index] -= 5;
 }
 
 void Weapon_PlasmaRifle (edict_t *ent)

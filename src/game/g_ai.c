@@ -33,6 +33,206 @@ float		enemy_yaw;
 
 //============================================================================
 
+/*
+=============
+Actor_EngageEnemy
+
+Align the actor with its current enemy and schedule the initial attack window.
+=============
+*/
+static void Actor_EngageEnemy (edict_t *self)
+{
+	vec3_t	dir;
+
+	if (!self || !self->enemy)
+		return;
+
+	self->goalentity = self->enemy;
+
+	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
+		self->monsterinfo.stand(self);
+	else
+		self->monsterinfo.run(self);
+
+	VectorSubtract(self->enemy->s.origin, self->s.origin, dir);
+	self->ideal_yaw = vectoyaw(dir);
+
+	if (!(self->monsterinfo.aiflags & AI_STAND_GROUND))
+		AttackFinished(self, random());
+}
+
+/*
+=============
+Actor_FindEnemyTarget
+
+Scan for the nearest visible hostile monster when the actor is in idle-follow
+mode.
+=============
+*/
+static qboolean Actor_FindEnemyTarget (edict_t *self)
+{
+	edict_t *ent;
+	edict_t *best;
+	vec3_t	dir;
+	float	best_dist;
+	float	dist;
+	int		i;
+
+	if (!self)
+		return false;
+
+	best = NULL;
+	best_dist = 999999.0f;
+
+	for (i = 0; i < globals.num_edicts; i++)
+	{
+		ent = &g_edicts[i];
+		if (!ent->inuse)
+			continue;
+		if (!(ent->svflags & SVF_MONSTER))
+			continue;
+		if (ent->svflags & SVF_DEADMONSTER)
+			continue;
+		if (ent->deadflag == DEAD_DYING || ent->deadflag == DEAD_DEAD)
+			continue;
+		if (ent->monsterinfo.aiflags & AI_STAND_GROUND)
+			continue;
+		if (!visible(self, ent))
+			continue;
+
+		VectorSubtract(ent->s.origin, self->s.origin, dir);
+		dist = VectorLength(dir);
+		if (dist < best_dist)
+		{
+			best_dist = dist;
+			best = ent;
+		}
+	}
+
+	if (!best)
+		return false;
+
+	self->monsterinfo.aiflags &= ~AI_ACTOR_FOLLOW;
+	VectorSubtract(best->s.origin, self->s.origin, dir);
+	self->ideal_yaw = vectoyaw(dir);
+	M_ChangeYaw(self);
+	self->enemy = best;
+	Actor_EngageEnemy(self);
+
+	return true;
+}
+
+/*
+=============
+Actor_IsPlayerFollowTarget
+
+Return true if the entity is a player or chained to one via actor follow
+targets.
+=============
+*/
+static qboolean Actor_IsPlayerFollowTarget (edict_t *ent)
+{
+	edict_t *follow;
+	int		depth;
+
+	if (!ent || !ent->inuse)
+		return false;
+
+	if (ent->classname && strcmp(ent->classname, "player") == 0)
+		return true;
+
+	if (!(ent->monsterinfo.aiflags & AI_ACTOR_FOLLOW))
+		return false;
+
+	follow = ent->goalentity;
+	for (depth = 0; depth < 10; depth++)
+	{
+		if (!follow || !follow->classname)
+			return false;
+		if (strcmp(follow->classname, "player") == 0)
+			return true;
+		if (!(follow->monsterinfo.aiflags & AI_ACTOR_FOLLOW))
+			return false;
+		if (follow == ent)
+			return false;
+		follow = follow->goalentity;
+	}
+
+	return false;
+}
+
+/*
+=============
+Actor_FindFollowTarget
+
+Pick a nearby player (or a chained actor leading to a player) and move toward
+them.
+=============
+*/
+static qboolean Actor_FindFollowTarget (edict_t *self)
+{
+	edict_t *candidate;
+	edict_t *ent;
+	vec3_t	dir;
+	float	best_dist;
+	float	dist;
+	int		i;
+
+	if (!self)
+		return false;
+
+	candidate = NULL;
+	best_dist = 999999.0f;
+
+	if (self->monsterinfo.aiflags & AI_ACTOR_FOLLOW)
+	{
+		if (self->goalentity && Actor_IsPlayerFollowTarget(self->goalentity))
+			candidate = self->goalentity;
+	}
+
+	if (!candidate)
+	{
+		for (i = 0; i < globals.num_edicts; i++)
+		{
+			ent = &g_edicts[i];
+			if (!ent->inuse)
+				continue;
+			if (!ent->client && !(ent->monsterinfo.aiflags & AI_STAND_GROUND))
+				continue;
+			if (!visible(self, ent))
+				continue;
+			if (!Actor_IsPlayerFollowTarget(ent))
+				continue;
+
+			VectorSubtract(ent->s.origin, self->s.origin, dir);
+			dist = VectorLength(dir);
+			if (dist < best_dist)
+			{
+				best_dist = dist;
+				candidate = ent;
+			}
+		}
+	}
+
+	if (!candidate)
+		return false;
+
+	VectorSubtract(candidate->s.origin, self->s.origin, dir);
+	self->ideal_yaw = vectoyaw(dir);
+	M_ChangeYaw(self);
+	self->goalentity = candidate;
+	self->movetarget = candidate;
+	self->monsterinfo.aiflags |= AI_ACTOR_FOLLOW;
+
+	dist = VectorLength(dir);
+	if (dist >= 100.0f)
+		self->monsterinfo.walk(self);
+	else
+		self->monsterinfo.stand(self);
+
+	return true;
+}
+
 
 /*
 =================
@@ -414,6 +614,17 @@ qboolean FindTarget (edict_t *self)
 	edict_t		*client;
 	qboolean	heardit;
 	int			r;
+
+	if (self->monsterinfo.aiflags & AI_ACTOR_PATH_IDLE)
+	{
+		if (self->monsterinfo.aiflags & AI_ACTOR_FRIENDLY)
+		{
+			if (Actor_FindEnemyTarget(self))
+				return true;
+		}
+
+		return Actor_FindFollowTarget(self);
+	}
 
 	if (self->monsterinfo.aiflags & AI_GOOD_GUY)
 	{

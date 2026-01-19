@@ -11,7 +11,6 @@ FRAME_DEFINE_RE = re.compile(r"#define\s+(SPIDER_FRAME_[A-Z0-9_]+)\s+([^\s]+)")
 MMOVE_RE = re.compile(r"static\s+mmove_t\s+([a-z0-9_]+)\s*=\s*\{\s*([^}]+?)\s*\};", re.DOTALL)
 SOUND_SETUP_RE = re.compile(r"sound_([a-z0-9_\[\]]+)\s*=\s*gi.soundindex\s*\(\"([^\"]+)\"\);")
 VECTOR_SET_RE = re.compile(r"VectorSet\s*\(\s*self->(mins|maxs)\s*,\s*([-+0-9.]+)f?\s*,\s*([-+0-9.]+)f?\s*,\s*([-+0-9.]+)f?\s*\)\s*;")
-COMBO_DEFINE_RE = re.compile(r"#define\s+(SPIDER_COMBO_[A-Z_]+)\s+([0-9.]+)f")
 
 
 def load_fixture() -> dict:
@@ -103,45 +102,46 @@ class SpiderRegressionTests(unittest.TestCase):
 
         audio_fixture = self.fixture["audio"]
         self.assertEqual(sounds.get("step", [None])[0], audio_fixture["step"])
-        self.assertEqual(sounds.get("death", [None])[0], audio_fixture["death_voice"])
-        self.assertEqual(sounds.get("death_thud", [None])[0], audio_fixture["death_thud"])
+        self.assertEqual(sounds.get("idle", [None])[0], audio_fixture["idle"])
+        self.assertEqual(sounds.get("search", [None])[0], audio_fixture["search"])
+        self.assertEqual(sounds.get("sight", [None])[0], audio_fixture["sight"])
         pain_paths = sounds.get("pain1", []) + sounds.get("pain2", [])
         for path in audio_fixture["pain"]:
             self.assertIn(path, pain_paths, "Pain table missing expected clip")
-        self.assertEqual(sounds.get("sight", [None])[0], audio_fixture["sight"])
-        self.assertEqual(sounds.get("search", [None])[0], audio_fixture["search"])
+        melee_paths = (
+            sounds.get("melee1", [])
+            + sounds.get("melee2", [])
+            + sounds.get("melee3", [])
+        )
+        for path in audio_fixture["melee"]:
+            self.assertIn(path, melee_paths, "Melee table missing expected clip")
 
-    def test_boss_spawnflag_applies_hull_and_idle(self) -> None:
+    def test_corpse_spawnflag_applies_hull(self) -> None:
         spawn_block = extract_function_block(self.source_text, "SP_monster_spider")
         self.assertRegex(
             spawn_block,
-            rf"spawnflags\s*&\s*0x{self.fixture['spawnflags']['boss_flag']:x}",
-            "Boss spawnflag check missing",
+            rf"spawnflags\s*&\s*0x{self.fixture['spawnflags']['corpse_flag']:x}",
+            "Corpse spawnflag check missing",
         )
         vectors = parse_spawn_vectors(spawn_block)
-        boss_hull = self.fixture["spawnflags"]["boss_hull"]
-        self.assertEqual(vectors.get("mins"), boss_hull["mins"], "Boss mins hull mismatch")
-        self.assertEqual(vectors.get("maxs"), boss_hull["maxs"], "Boss maxs hull mismatch")
+        corpse_hull = self.fixture["spawnflags"]["corpse_hull"]
+        self.assertEqual(vectors.get("mins"), corpse_hull["mins"], "Corpse mins hull mismatch")
+        self.assertEqual(vectors.get("maxs"), corpse_hull["maxs"], "Corpse maxs hull mismatch")
 
-    def test_combo_timing_constants_match_fixture(self) -> None:
-        timings = {macro: float(value) for macro, value in COMBO_DEFINE_RE.findall(self.source_text)}
-        combo_fixture = self.fixture["combo_timing"]
-        self.assertAlmostEqual(timings.get("SPIDER_COMBO_FIRST_WINDOW", 0.0), combo_fixture["first"])
-        self.assertAlmostEqual(timings.get("SPIDER_COMBO_CHAIN_WINDOW", 0.0), combo_fixture["chain"])
-        self.assertAlmostEqual(timings.get("SPIDER_COMBO_FINISH_WINDOW", 0.0), combo_fixture["finish"])
-        self.assertAlmostEqual(
-            timings.get("SPIDER_COMBO_RECOVER_COOLDOWN", 0.0),
-            combo_fixture["recover_cooldown"],
-        )
-
-    def test_attack_timeline_matches_fixture(self) -> None:
+    def test_action_timeline_matches_fixture(self) -> None:
         ordered = [
             "spider_move_walk",
-            "spider_move_attack_primary",
-            "spider_move_attack_secondary",
-            "spider_move_attack_finisher",
-            "spider_move_attack_recover",
-            "spider_move_death",
+            "spider_move_run1",
+            "spider_move_run2",
+            "spider_move_attack_left",
+            "spider_move_attack_right",
+            "spider_move_attack_dual",
+            "spider_move_melee_primary",
+            "spider_move_melee_secondary",
+            "spider_move_pain1",
+            "spider_move_pain2",
+            "spider_move_death1",
+            "spider_move_death2",
         ]
         last_end = -1
         for name in ordered:

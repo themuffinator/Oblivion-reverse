@@ -2,6 +2,8 @@
 #ifndef M_SPIDER_H
 #define M_SPIDER_H
 
-void SP_monster_spider(edict_t *self);
+struct edict_s;
+
+void SP_monster_spider(struct edict_s *self);
 
 #endif

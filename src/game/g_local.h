@@ -27,10 +27,37 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // short, server-visible gclient_t and edict_t structures,
 // because we define the full size ones in this file
 #define GAME_INCLUDE
-#include "g_oblivion_defines.h"
+// Oblivion specific Means of Death
+// Starting from 40 to avoid conflict with standard Q2 (0-33) and common mods
+#define MOD_DISINTEGRATOR 40
+#define MOD_DEATOMIZER 41
+#define MOD_DEATOMIZER_SPLASH 42
+#define MOD_PLASMA_PISTOL 43
+#define MOD_PLASMA_RIFLE 44
+#define MOD_DONUT 45
+#define MOD_HELLFURY 46
+#define MOD_LASERCANNON 47
+#define MOD_DETPACK 48
+#define MOD_MINE 49
+#define MOD_MINE_SPLASH 50
+#define MOD_REMOTE_DETONATOR 51
+#define MOD_REMOTE_CANNON 52
+
+// Spawnflags (SVF_) or Entity Flags (FL_)
+// Using available bits where possible.
+// SVF_NOCLIENT = 1, SVF_DEADMONSTER = 2, SVF_MONSTER = 4
+#define SVF_PROJECTILE 0x00000008
+
+// FL_ flags typically start at 0x00000001 (FL_FLY). standard goes up to
+// 0x00002000 (FL_RESPAWN) Picking a high bit for safety.
+#define FL_DODGE 0x00004000
+
+// Effect Flags (EF_)
+// Using a define to map to existing or unused flag
+#define EF_DUALFIRE EF_ANIM_ALLFAST
+
 #include "game.h"
 #include "m_actor.h"
-
 
 #ifndef OBLIVION_ENABLE_ROTATE_TRAIN
 #define OBLIVION_ENABLE_ROTATE_TRAIN 1
@@ -82,19 +109,19 @@ typedef struct edict_oblivion_ext_s {
       char *mission_id;            // mission objective identifier
       char *mission_title;         // mission log title override
       char *mission_text;          // mission log body text
-    } mission;
+    };
     struct {
       float deatom_f_320;
       float deatom_f_324;
       float deatom_f_328;
       float deatom_f_32c;
-      int deatom_state; // 0x330
+      int deatom_state;     // 0x330
       vec3_t deatom_origin; // 0x334
       vec3_t deatom_v_340;
       float deatom_f_34c;
       float deatom_f_350;
       float deatom_f_354;
-    } deatom;
+    };
   };
 
   float cyborg_anchor_time;     // wounded stand-ground release timer
@@ -236,6 +263,11 @@ typedef enum {
 #define AI_MEDIC 0x00002000
 #define AI_RESURRECTING 0x00004000
 #define AI_FLOAT 0x00008000
+// Oblivion actor AI extensions
+#define AI_ACTOR_FRIENDLY 0x01000000
+#define AI_ACTOR_PATH_IDLE 0x02000000
+#define AI_ACTOR_SHOOT_ONCE 0x04000000
+#define AI_ACTOR_FOLLOW 0x08000000
 
 // monster attack state
 #define AS_STRAIGHT 1
@@ -580,6 +612,7 @@ typedef struct {
 
   float pausetime;
   float attack_finished;
+  float melee_debounce_time;
 
   vec3_t saved_goal;
   float search_time;
@@ -643,18 +676,7 @@ extern int body_armor_index;
 #define MOD_TRIGGER_HURT 31
 #define MOD_HIT 32
 #define MOD_TARGET_BLASTER 33
-#define MOD_DEATOMIZER 34
-#define MOD_DEATOMIZER_SPLASH 35
-#define MOD_PLASMA_PISTOL 36
-#define MOD_PLASMA_RIFLE 37
-#define MOD_HELLFURY 38
-#define MOD_DONUT 39
-#define MOD_LASERCANNON 40
-#define MOD_DETPACK 41
-#define MOD_MINE 42
-#define MOD_MINE_SPLASH 43
-#define MOD_REMOTE_DETONATOR 44
-#define MOD_REMOTE_CANNON 45
+
 #define MOD_LASER_CANNON MOD_LASERCANNON
 #define MOD_FRIENDLY_FIRE 0x8000000
 
@@ -935,7 +957,7 @@ void fire_blaster_with_mod(edict_t *self, vec3_t start, vec3_t aimdir,
                            int damage, int speed, int effect, qboolean hyper,
                            int mod);
 void fire_plasma_bolt(edict_t *self, vec3_t start, vec3_t aimdir, int damage,
-                      int speed, int effect, int mod);
+                      int speed, int plasma_type);
 void fire_grenade(edict_t *self, vec3_t start, vec3_t aimdir, int damage,
                   int speed, float timer, float damage_radius);
 void fire_grenade2(edict_t *self, vec3_t start, vec3_t aimdir, int damage,
@@ -1382,3 +1404,10 @@ struct edict_s {
   moveinfo_t moveinfo;
   monsterinfo_t monsterinfo;
 };
+
+// g_oblivion_monster.h prototypes
+void fire_deatom(edict_t *self, vec3_t start, vec3_t dir, int damage,
+                 int speed);
+void monster_fire_deatom(edict_t *self, vec3_t start, vec3_t dir, int damage,
+                         int speed, int flashtype);
+void monster_footstep(edict_t *self);

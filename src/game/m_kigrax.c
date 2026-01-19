@@ -1,8 +1,6 @@
 /*
- * Hovering Kigrax sentry.  The original binary exposed a bespoke hover
- * AI with multiple strafing and scouting tables.  This reimplementation
- * keeps the same behavioural contract using a light-weight state machine
- * that leverages the stock Quake II flying helpers.
+ * Kigrax hovering plasma sentry.
+ * Reconstructed from Oblivion retail assembly.
  */
 
 #include "g_local.h"
@@ -13,180 +11,176 @@
 
 enum
 {
-	KIGRAX_FRAME_IDLE_START = 0,
-	KIGRAX_FRAME_IDLE_END = 27,
-	KIGRAX_FRAME_SCAN_START = 28,
-	KIGRAX_FRAME_SCAN_END = 48,
-	KIGRAX_FRAME_PATROL_CCW_START = 61,
-	KIGRAX_FRAME_PATROL_CCW_END = 82,
-	KIGRAX_FRAME_PATROL_CW_START = 83,
-	KIGRAX_FRAME_PATROL_CW_END = 104,
-	KIGRAX_FRAME_STRAFE_LONG_START = 105,
-	KIGRAX_FRAME_STRAFE_LONG_END = 121,
-	KIGRAX_FRAME_STRAFE_DASH_START = 122,
-	KIGRAX_FRAME_STRAFE_DASH_END = 138,
-	KIGRAX_FRAME_ATTACK_PREP_START = 139,
-	KIGRAX_FRAME_ATTACK_PREP_END = 149,
-	KIGRAX_FRAME_ATTACK_START = 150,
-	KIGRAX_FRAME_ATTACK_FIRE = 163,
-	KIGRAX_FRAME_ATTACK_END = 168,
-	KIGRAX_FRAME_PAIN_START = 139,
-	KIGRAX_FRAME_PAIN_END = 149,
-	KIGRAX_FRAME_DEATH_START = 150,
-	KIGRAX_FRAME_DEATH_END = 168
+	KIGRAX_FRAME_STAND_FIRST = 0,
+	KIGRAX_FRAME_STAND_LAST = 27,
+	KIGRAX_FRAME_SCAN_FIRST = 28,
+	KIGRAX_FRAME_SCAN_LAST = 48,
+	KIGRAX_FRAME_WALK1_FIRST = 61,
+	KIGRAX_FRAME_WALK1_LAST = 82,
+	KIGRAX_FRAME_WALK2_FIRST = 83,
+	KIGRAX_FRAME_WALK2_LAST = 104,
+	KIGRAX_FRAME_SIGHT_FIRST = 105,
+	KIGRAX_FRAME_SIGHT_LAST = 121,
+	KIGRAX_FRAME_RUN_FIRST = 122,
+	KIGRAX_FRAME_RUN_LAST = 138,
+	KIGRAX_FRAME_PAIN_FIRST = 139,
+	KIGRAX_FRAME_PAIN_LAST = 149,
+	KIGRAX_FRAME_DEATH_FIRST = 150,
+	KIGRAX_FRAME_DEATH_LAST = 168,
+	KIGRAX_FRAME_MELEE1_FIRST = 169,
+	KIGRAX_FRAME_MELEE1_LAST = 183,
+	KIGRAX_FRAME_MELEE2_FIRST = 184,
+	KIGRAX_FRAME_MELEE2_LAST = 194,
+	KIGRAX_FRAME_ATTACK_FIRST = 195,
+	KIGRAX_FRAME_ATTACK_LAST = 204
 };
 
-#define KIGRAX_DEFAULT_MIN_Z	-32.0f
-#define KIGRAX_DEFAULT_MAX_Z	12.0f
-#define KIGRAX_ATTACK_MAX_Z	0.0f
-#define KIGRAX_PAIN_STAGGER_TIME	0.5f
-#define KIGRAX_PAIN_COOLDOWN	1.5f
-#define KIGRAX_SALVO_INTERVAL	(FRAMETIME)
+#define KIGRAX_FRAME_DEATH_THINK 163
+#define KIGRAX_FRAME_MELEE1_FIRE1 176
+#define KIGRAX_FRAME_MELEE1_FIRE2 180
+#define KIGRAX_FRAME_MELEE2_FIRE 188
+#define KIGRAX_FRAME_ATTACK_FIRE 198
 
 #define KIGRAX_FRAME_COUNT(start, end) ((end) - (start) + 1)
 
-static const float kigrax_salvo_yaw_offsets[] = {0.0f, -4.0f, 4.0f, 0.0f};
-static const float kigrax_salvo_pitch_offsets[] = {0.0f, -2.0f, -2.0f, 0.0f};
+#define KIGRAX_STAND_CHANCE 0.333333f
+#define KIGRAX_SEARCH_CHANCE 0.5f
+#define KIGRAX_MELEE_SKIP_CHANCE 0.1f
+#define KIGRAX_MELEE_ALT_CHANCE 0.9f
+#define KIGRAX_PAIN_DELAY 3.0f
 
-static mframe_t kigrax_frames_hover[KIGRAX_FRAME_COUNT (KIGRAX_FRAME_IDLE_START, KIGRAX_FRAME_IDLE_END)];
-static mframe_t kigrax_frames_scan[KIGRAX_FRAME_COUNT (KIGRAX_FRAME_SCAN_START, KIGRAX_FRAME_SCAN_END)];
-static mframe_t kigrax_frames_patrol_ccw[KIGRAX_FRAME_COUNT (KIGRAX_FRAME_PATROL_CCW_START, KIGRAX_FRAME_PATROL_CCW_END)];
-static mframe_t kigrax_frames_patrol_cw[KIGRAX_FRAME_COUNT (KIGRAX_FRAME_PATROL_CW_START, KIGRAX_FRAME_PATROL_CW_END)];
-static mframe_t kigrax_frames_strafe_long[KIGRAX_FRAME_COUNT (KIGRAX_FRAME_STRAFE_LONG_START, KIGRAX_FRAME_STRAFE_LONG_END)];
-static mframe_t kigrax_frames_strafe_dash[KIGRAX_FRAME_COUNT (KIGRAX_FRAME_STRAFE_DASH_START, KIGRAX_FRAME_STRAFE_DASH_END)];
-static mframe_t kigrax_frames_attack_prep[KIGRAX_FRAME_COUNT (KIGRAX_FRAME_ATTACK_PREP_START, KIGRAX_FRAME_ATTACK_PREP_END)];
-static mframe_t kigrax_frames_attack[KIGRAX_FRAME_COUNT (KIGRAX_FRAME_ATTACK_START, KIGRAX_FRAME_ATTACK_END)];
-static mframe_t kigrax_frames_pain[KIGRAX_FRAME_COUNT (KIGRAX_FRAME_PAIN_START, KIGRAX_FRAME_PAIN_END)];
-static mframe_t kigrax_frames_death[KIGRAX_FRAME_COUNT (KIGRAX_FRAME_DEATH_START, KIGRAX_FRAME_DEATH_END)];
+#define KIGRAX_MELEE_KICK 100
+#define KIGRAX_PLASMA_DAMAGE 10
+#define KIGRAX_PLASMA_SPEED 1000
+#define KIGRAX_PLASMA_FLASH 1
+#define KIGRAX_PLASMA_TYPE 1
 
-static void kigrax_idle_select (edict_t *self);
-static void kigrax_walk_select (edict_t *self);
-static void kigrax_run_select (edict_t *self);
-static void kigrax_attack_execute (edict_t *self);
-static void kigrax_attack_salvo (edict_t *self);
-static void kigrax_begin_pain_stagger (edict_t *self);
-static void kigrax_end_pain (edict_t *self);
-static void kigrax_spawn_debris (edict_t *self);
-static void kigrax_dead (edict_t *self);
+static vec3_t kigrax_plasma_offset = {16.0f, 0.0f, -16.0f};
 
-static const mframe_t kigrax_frames_pain_template[] = {
-	{ai_move, 0.0f, kigrax_begin_pain_stagger},
-	{ai_move, 0.0f, NULL},
-	{ai_move, 0.0f, NULL},
-	{ai_move, 0.0f, NULL},
-	{ai_move, 0.0f, NULL},
-	{ai_move, 0.0f, NULL},
-	{ai_move, 0.0f, NULL},
-	{ai_move, 0.0f, NULL},
-	{ai_move, 0.0f, NULL},
-	{ai_move, 0.0f, NULL},
-	{ai_move, 0.0f, NULL}
-};
+static mframe_t kigrax_frames_stand[KIGRAX_FRAME_COUNT(KIGRAX_FRAME_STAND_FIRST, KIGRAX_FRAME_STAND_LAST)];
+static mframe_t kigrax_frames_scan[KIGRAX_FRAME_COUNT(KIGRAX_FRAME_SCAN_FIRST, KIGRAX_FRAME_SCAN_LAST)];
+static mframe_t kigrax_frames_walk1[KIGRAX_FRAME_COUNT(KIGRAX_FRAME_WALK1_FIRST, KIGRAX_FRAME_WALK1_LAST)];
+static mframe_t kigrax_frames_walk2[KIGRAX_FRAME_COUNT(KIGRAX_FRAME_WALK2_FIRST, KIGRAX_FRAME_WALK2_LAST)];
+static mframe_t kigrax_frames_sight[KIGRAX_FRAME_COUNT(KIGRAX_FRAME_SIGHT_FIRST, KIGRAX_FRAME_SIGHT_LAST)];
+static mframe_t kigrax_frames_run[KIGRAX_FRAME_COUNT(KIGRAX_FRAME_RUN_FIRST, KIGRAX_FRAME_RUN_LAST)];
+static mframe_t kigrax_frames_pain[KIGRAX_FRAME_COUNT(KIGRAX_FRAME_PAIN_FIRST, KIGRAX_FRAME_PAIN_LAST)];
+static mframe_t kigrax_frames_death[KIGRAX_FRAME_COUNT(KIGRAX_FRAME_DEATH_FIRST, KIGRAX_FRAME_DEATH_LAST)];
+static mframe_t kigrax_frames_melee1[KIGRAX_FRAME_COUNT(KIGRAX_FRAME_MELEE1_FIRST, KIGRAX_FRAME_MELEE1_LAST)];
+static mframe_t kigrax_frames_melee2[KIGRAX_FRAME_COUNT(KIGRAX_FRAME_MELEE2_FIRST, KIGRAX_FRAME_MELEE2_LAST)];
+static mframe_t kigrax_frames_attack[KIGRAX_FRAME_COUNT(KIGRAX_FRAME_ATTACK_FIRST, KIGRAX_FRAME_ATTACK_LAST)];
 
-static const mframe_t kigrax_frames_death_template[] = {
-	{ai_move, 0.0f, NULL},
-	{ai_move, 0.0f, NULL},
-	{ai_move, 0.0f, NULL},
-	{ai_move, 0.0f, kigrax_spawn_debris},
-	{ai_move, 0.0f, NULL},
-	{ai_move, 0.0f, NULL},
-	{ai_move, 0.0f, NULL},
-	{ai_move, 0.0f, NULL},
-	{ai_move, 0.0f, NULL},
-	{ai_move, 0.0f, NULL},
-	{ai_move, 0.0f, kigrax_spawn_debris},
-	{ai_move, 0.0f, NULL},
-	{ai_move, 0.0f, NULL},
-	{ai_move, 0.0f, NULL},
-	{ai_move, 0.0f, NULL},
-	{ai_move, 0.0f, NULL},
-	{ai_move, 0.0f, NULL},
-	{ai_move, 0.0f, NULL},
-	{ai_move, 0.0f, NULL}
-};
+static void kigrax_stand(edict_t *self);
+static void kigrax_walk(edict_t *self);
+static void kigrax_run(edict_t *self);
+static void kigrax_attack(edict_t *self);
+static void kigrax_melee(edict_t *self);
+static void kigrax_search(edict_t *self);
+static void kigrax_sight(edict_t *self, edict_t *other);
+static void kigrax_pain(edict_t *self, edict_t *other, float kick, int damage);
+static void kigrax_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point);
+static void kigrax_dead(edict_t *self);
+static void kigrax_strike1(edict_t *self);
+static void kigrax_strike2(edict_t *self);
+static void kigrax_fire_plasma(edict_t *self);
 
-static mmove_t kigrax_move_hover = {
-	KIGRAX_FRAME_IDLE_START,
-	KIGRAX_FRAME_IDLE_END,
-	kigrax_frames_hover,
-	kigrax_idle_select
+static mmove_t kigrax_move_stand = {
+	KIGRAX_FRAME_STAND_FIRST,
+	KIGRAX_FRAME_STAND_LAST,
+	kigrax_frames_stand,
+	NULL
 };
 
 static mmove_t kigrax_move_scan = {
-	KIGRAX_FRAME_SCAN_START,
-	KIGRAX_FRAME_SCAN_END,
+	KIGRAX_FRAME_SCAN_FIRST,
+	KIGRAX_FRAME_SCAN_LAST,
 	kigrax_frames_scan,
-	kigrax_idle_select
+	NULL
 };
 
-static mmove_t kigrax_move_patrol_ccw = {
-	KIGRAX_FRAME_PATROL_CCW_START,
-	KIGRAX_FRAME_PATROL_CCW_END,
-	kigrax_frames_patrol_ccw,
-	kigrax_walk_select
+static mmove_t kigrax_move_walk1 = {
+	KIGRAX_FRAME_WALK1_FIRST,
+	KIGRAX_FRAME_WALK1_LAST,
+	kigrax_frames_walk1,
+	NULL
 };
 
-static mmove_t kigrax_move_patrol_cw = {
-	KIGRAX_FRAME_PATROL_CW_START,
-	KIGRAX_FRAME_PATROL_CW_END,
-	kigrax_frames_patrol_cw,
-	kigrax_walk_select
+static mmove_t kigrax_move_walk2 = {
+	KIGRAX_FRAME_WALK2_FIRST,
+	KIGRAX_FRAME_WALK2_LAST,
+	kigrax_frames_walk2,
+	NULL
 };
 
-static mmove_t kigrax_move_strafe_long = {
-	KIGRAX_FRAME_STRAFE_LONG_START,
-	KIGRAX_FRAME_STRAFE_LONG_END,
-	kigrax_frames_strafe_long,
-	kigrax_run_select
+static mmove_t kigrax_move_sight = {
+	KIGRAX_FRAME_SIGHT_FIRST,
+	KIGRAX_FRAME_SIGHT_LAST,
+	kigrax_frames_sight,
+	NULL
 };
 
-static mmove_t kigrax_move_strafe_dash = {
-	KIGRAX_FRAME_STRAFE_DASH_START,
-	KIGRAX_FRAME_STRAFE_DASH_END,
-	kigrax_frames_strafe_dash,
-	kigrax_run_select
-};
-
-static mmove_t kigrax_move_attack_prep = {
-	KIGRAX_FRAME_ATTACK_PREP_START,
-	KIGRAX_FRAME_ATTACK_PREP_END,
-	kigrax_frames_attack_prep,
-	kigrax_attack_execute
-};
-
-static mmove_t kigrax_move_attack = {
-	KIGRAX_FRAME_ATTACK_START,
-	KIGRAX_FRAME_ATTACK_END,
-	kigrax_frames_attack,
-	kigrax_attack_salvo
+static mmove_t kigrax_move_run = {
+	KIGRAX_FRAME_RUN_FIRST,
+	KIGRAX_FRAME_RUN_LAST,
+	kigrax_frames_run,
+	NULL
 };
 
 static mmove_t kigrax_move_pain = {
-	KIGRAX_FRAME_PAIN_START,
-	KIGRAX_FRAME_PAIN_END,
+	KIGRAX_FRAME_PAIN_FIRST,
+	KIGRAX_FRAME_PAIN_LAST,
 	kigrax_frames_pain,
-	kigrax_end_pain
+	kigrax_run
 };
 
 static mmove_t kigrax_move_death = {
-	KIGRAX_FRAME_DEATH_START,
-	KIGRAX_FRAME_DEATH_END,
+	KIGRAX_FRAME_DEATH_FIRST,
+	KIGRAX_FRAME_DEATH_LAST,
 	kigrax_frames_death,
 	kigrax_dead
 };
+
+static mmove_t kigrax_move_melee1 = {
+	KIGRAX_FRAME_MELEE1_FIRST,
+	KIGRAX_FRAME_MELEE1_LAST,
+	kigrax_frames_melee1,
+	kigrax_melee
+};
+
+static mmove_t kigrax_move_melee2 = {
+	KIGRAX_FRAME_MELEE2_FIRST,
+	KIGRAX_FRAME_MELEE2_LAST,
+	kigrax_frames_melee2,
+	kigrax_melee
+};
+
+static mmove_t kigrax_move_attack = {
+	KIGRAX_FRAME_ATTACK_FIRST,
+	KIGRAX_FRAME_ATTACK_LAST,
+	kigrax_frames_attack,
+	kigrax_run
+};
+
+static int sound_pain;
+static int sound_death;
+static int sound_sight;
+static int sound_search1;
+static int sound_search2;
+static int sound_attack;
+static int sound_idle;
 
 /*
 =============
 kigrax_seed_frames
 
-Populate a contiguous frame array with a shared AI routine and movement scale.
+Initialize a contiguous mframe array with shared AI and distance.
 =============
 */
-static void kigrax_seed_frames (mframe_t *frames, size_t frame_count, void (*aifunc)(edict_t *self, float dist), float dist)
+static void kigrax_seed_frames(mframe_t *frames, size_t count,
+		void (*aifunc)(edict_t *self, float dist), float dist)
 {
-	size_t		index;
+	size_t	index;
 
-	for (index = 0; index < frame_count; index++)
+	for (index = 0; index < count; index++)
 	{
 		frames[index].aifunc = aifunc;
 		frames[index].dist = dist;
@@ -198,339 +192,200 @@ static void kigrax_seed_frames (mframe_t *frames, size_t frame_count, void (*aif
 =============
 kigrax_init_moves
 
-Recreate the HLIL mmove tables, wiring per-frame callbacks for salvo, pain, and
-debris emission so the patrol/attack cadence mirrors the retail DLL.
+Seed the Kigrax frame tables and wire the per-frame callbacks.
 =============
 */
-static void kigrax_init_moves (void)
+static void kigrax_init_moves(void)
 {
-		kigrax_seed_frames (kigrax_frames_hover, ARRAY_LEN (kigrax_frames_hover), ai_stand, 0.0f);
-		kigrax_seed_frames (kigrax_frames_scan, ARRAY_LEN (kigrax_frames_scan), ai_stand, 0.0f);
-		kigrax_seed_frames (kigrax_frames_patrol_ccw, ARRAY_LEN (kigrax_frames_patrol_ccw), ai_walk, 0.0f);
-		kigrax_seed_frames (kigrax_frames_patrol_cw, ARRAY_LEN (kigrax_frames_patrol_cw), ai_walk, 0.0f);
-		kigrax_seed_frames (kigrax_frames_strafe_long, ARRAY_LEN (kigrax_frames_strafe_long), ai_run, 0.0f);
-		kigrax_seed_frames (kigrax_frames_strafe_dash, ARRAY_LEN (kigrax_frames_strafe_dash), ai_run, 0.0f);
-		kigrax_seed_frames (kigrax_frames_attack_prep, ARRAY_LEN (kigrax_frames_attack_prep), ai_move, 0.0f);
-		kigrax_seed_frames (kigrax_frames_attack, ARRAY_LEN (kigrax_frames_attack), ai_move, 0.0f);
+	kigrax_seed_frames(kigrax_frames_stand, ARRAY_LEN(kigrax_frames_stand), ai_stand, 0.0f);
+	kigrax_seed_frames(kigrax_frames_scan, ARRAY_LEN(kigrax_frames_scan), ai_stand, 0.0f);
+	kigrax_seed_frames(kigrax_frames_walk1, ARRAY_LEN(kigrax_frames_walk1), ai_walk, 4.0f);
+	kigrax_seed_frames(kigrax_frames_walk2, ARRAY_LEN(kigrax_frames_walk2), ai_walk, 4.0f);
+	kigrax_seed_frames(kigrax_frames_sight, ARRAY_LEN(kigrax_frames_sight), ai_run, 10.0f);
+	kigrax_seed_frames(kigrax_frames_run, ARRAY_LEN(kigrax_frames_run), ai_run, 15.0f);
+	kigrax_seed_frames(kigrax_frames_pain, ARRAY_LEN(kigrax_frames_pain), ai_move, 0.0f);
+	kigrax_seed_frames(kigrax_frames_death, ARRAY_LEN(kigrax_frames_death), ai_move, 0.0f);
+	kigrax_seed_frames(kigrax_frames_melee1, ARRAY_LEN(kigrax_frames_melee1), ai_charge, 1.0f);
+	kigrax_seed_frames(kigrax_frames_melee2, ARRAY_LEN(kigrax_frames_melee2), ai_charge, 1.0f);
+	kigrax_seed_frames(kigrax_frames_attack, ARRAY_LEN(kigrax_frames_attack), ai_charge, 0.0f);
 
-		memcpy (kigrax_frames_pain, kigrax_frames_pain_template, sizeof (kigrax_frames_pain_template));
-		kigrax_frames_pain[ARRAY_LEN (kigrax_frames_pain) - 1].thinkfunc = kigrax_end_pain;
-
-		memcpy (kigrax_frames_death, kigrax_frames_death_template, sizeof (kigrax_frames_death_template));
-		kigrax_frames_death[3].thinkfunc = kigrax_spawn_debris;
-		kigrax_frames_death[10].thinkfunc = kigrax_spawn_debris;
-
-		kigrax_frames_attack[KIGRAX_FRAME_ATTACK_FIRE - KIGRAX_FRAME_ATTACK_START].thinkfunc = kigrax_attack_salvo;
+	kigrax_frames_death[KIGRAX_FRAME_DEATH_THINK - KIGRAX_FRAME_DEATH_FIRST].thinkfunc = kigrax_dead;
+	kigrax_frames_melee1[KIGRAX_FRAME_MELEE1_FIRE1 - KIGRAX_FRAME_MELEE1_FIRST].thinkfunc = kigrax_strike1;
+	kigrax_frames_melee1[KIGRAX_FRAME_MELEE1_FIRE2 - KIGRAX_FRAME_MELEE1_FIRST].thinkfunc = kigrax_strike1;
+	kigrax_frames_melee2[KIGRAX_FRAME_MELEE2_FIRE - KIGRAX_FRAME_MELEE2_FIRST].thinkfunc = kigrax_strike2;
+	kigrax_frames_attack[KIGRAX_FRAME_ATTACK_FIRE - KIGRAX_FRAME_ATTACK_FIRST].thinkfunc = kigrax_fire_plasma;
 }
-
-static int sound_sight;
-static int sound_search;
-static int sound_idle;
-static int sound_pain;
-static int sound_pain_strong;
-static int sound_death;
-static int sound_attack;
 
 /*
 =============
-kigrax_idle_select
-
-Pick either the hover loop or the scan loop based on a simple random roll
-and emit the idle vocalizations recovered from the HLIL spawn snapshot.
+kigrax_stand
 =============
 */
-static void kigrax_idle_select (edict_t *self)
+static void kigrax_stand(edict_t *self)
 {
-	if (random () < 0.5f)
-	{
-		self->monsterinfo.currentmove = &kigrax_move_hover;
-	}
-	else
-	{
+	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
+		return;
+
+	if (random() < KIGRAX_STAND_CHANCE)
 		self->monsterinfo.currentmove = &kigrax_move_scan;
-	}
-
-	if (random () < 0.5f)
-		gi.sound (self, CHAN_VOICE, sound_idle, 1.0f, ATTN_IDLE, 0.0f);
+	else
+		self->monsterinfo.currentmove = &kigrax_move_stand;
 }
 
 /*
 =============
-kigrax_walk_select
-
-Select one of the slow patrol loops unless the Kigrax is pinned by
-AI_STAND_GROUND, in which case it falls back to the idle selector.
+kigrax_walk
 =============
 */
-static void kigrax_walk_select (edict_t *self)
+static void kigrax_walk(edict_t *self)
 {
+	gi.dprintf("walking...\n");
+
+	if (random() < KIGRAX_STAND_CHANCE)
+		self->monsterinfo.currentmove = &kigrax_move_walk2;
+	else
+		self->monsterinfo.currentmove = &kigrax_move_walk1;
+}
+
+/*
+=============
+kigrax_run
+=============
+*/
+static void kigrax_run(edict_t *self)
+{
+	gi.dprintf("running...\n");
+
 	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
 	{
-		kigrax_idle_select (self);
+		self->monsterinfo.currentmove = &kigrax_move_stand;
 		return;
 	}
 
-	if (random () < 0.5f)
-		self->monsterinfo.currentmove = &kigrax_move_patrol_ccw;
-	else
-		self->monsterinfo.currentmove = &kigrax_move_patrol_cw;
+	self->monsterinfo.currentmove = &kigrax_move_run;
 }
 
 /*
 =============
-kigrax_run_select
-
-Choose between the longer strafing glide and the short dash loop that the
-HLIL controller used while chasing or attacking targets.
+kigrax_search
 =============
 */
-static void kigrax_run_select (edict_t *self)
+static void kigrax_search(edict_t *self)
 {
-	if (self->monsterinfo.aiflags & AI_STAND_GROUND)
-	{
-		kigrax_idle_select (self);
-		return;
-	}
-
-	if (random () < 0.4f)
-		self->monsterinfo.currentmove = &kigrax_move_strafe_dash;
+	if (random() < KIGRAX_SEARCH_CHANCE)
+		gi.sound(self, CHAN_VOICE, sound_search1, 1.0f, ATTN_NORM, 0.0f);
 	else
-		self->monsterinfo.currentmove = &kigrax_move_strafe_long;
+		gi.sound(self, CHAN_VOICE, sound_search2, 1.0f, ATTN_NORM, 0.0f);
 }
 
 /*
 =============
-kigrax_attack_execute
-
-Switch into the per-frame blaster burst after the zero-distance hover prep
-completes.
+kigrax_sight
 =============
 */
-static void kigrax_attack_execute (edict_t *self)
+static void kigrax_sight(edict_t *self, edict_t *other)
+{
+	gi.sound(self, CHAN_VOICE, sound_sight, 1.0f, ATTN_NORM, 0.0f);
+	self->monsterinfo.currentmove = &kigrax_move_sight;
+}
+
+/*
+=============
+kigrax_attack
+=============
+*/
+static void kigrax_attack(edict_t *self)
 {
 	self->monsterinfo.currentmove = &kigrax_move_attack;
 }
 
 /*
 =============
-kigrax_search
-
-Play the hover search chatter and resume the patrol selector so scripted
-controllers can reuse the HLIL scouting behaviour.
+kigrax_melee
 =============
 */
-static void kigrax_search (edict_t *self)
+static void kigrax_melee(edict_t *self)
 {
-	if (random () < 0.33f)
-		gi.sound (self, CHAN_VOICE, sound_idle, 1.0f, ATTN_IDLE, 0.0f);
+	if (self->enemy->health <= 0)
+	{
+		self->monsterinfo.currentmove = &kigrax_move_run;
+		return;
+	}
+
+	if (range(self, self->enemy) != RANGE_MELEE)
+	{
+		self->monsterinfo.currentmove = &kigrax_move_run;
+		return;
+	}
+
+	if (random() < KIGRAX_MELEE_SKIP_CHANCE)
+	{
+		self->monsterinfo.currentmove = &kigrax_move_run;
+		return;
+	}
+
+	if (random() < KIGRAX_MELEE_ALT_CHANCE)
+		self->monsterinfo.currentmove = &kigrax_move_melee1;
 	else
-		gi.sound (self, CHAN_VOICE, sound_search, 1.0f, ATTN_IDLE, 0.0f);
-
-	kigrax_walk_select (self);
+		self->monsterinfo.currentmove = &kigrax_move_melee2;
 }
 
 /*
 =============
-kigrax_sight
-
-Emit the hover sight cue and immediately drop into the aggressive strafing
-loop to mirror the HLIL state machine.
+kigrax_strike1
 =============
 */
-static void kigrax_sight (edict_t *self, edict_t *other)
+static void kigrax_strike1(edict_t *self)
 {
-	gi.sound (self, CHAN_VOICE, sound_sight, 1.0f, ATTN_NORM, 0.0f);
-	kigrax_run_select (self);
+	vec3_t	aim;
+
+	gi.sound(self, CHAN_WEAPON, sound_attack, 1.0f, ATTN_NORM, 0.0f);
+	VectorSet(aim, MELEE_DISTANCE, self->mins[0], 10.0f);
+	fire_hit(self, aim, 10 + (rand() % 6), KIGRAX_MELEE_KICK);
 }
 
 /*
 =============
-kigrax_set_attack_hull
-
-Mirror the HLIL salvo helper by toggling between the standing hover hull and
-the reduced crouch box used while firing.
+kigrax_strike2
 =============
 */
-static void kigrax_set_attack_hull (edict_t *self, qboolean crouched)
+static void kigrax_strike2(edict_t *self)
 {
-	if (crouched)
-	{
-		if (self->monsterinfo.aiflags & AI_DUCKED)
-			return;
+	vec3_t	aim;
 
-		self->monsterinfo.aiflags |= AI_DUCKED;
-		self->mins[2] = KIGRAX_DEFAULT_MIN_Z;
-		self->maxs[2] = KIGRAX_ATTACK_MAX_Z;
-		gi.linkentity (self);
-		return;
-	}
-
-	if (!(self->monsterinfo.aiflags & AI_DUCKED))
-		return;
-
-	self->monsterinfo.aiflags &= ~AI_DUCKED;
-	self->mins[2] = KIGRAX_DEFAULT_MIN_Z;
-	self->maxs[2] = KIGRAX_DEFAULT_MAX_Z;
-	gi.linkentity (self);
+	gi.sound(self, CHAN_WEAPON, sound_attack, 1.0f, ATTN_NORM, 0.0f);
+	VectorSet(aim, MELEE_DISTANCE, self->mins[0], 10.0f);
+	fire_hit(self, aim, 20 + (rand() % 20), KIGRAX_MELEE_KICK);
 }
 
 /*
 =============
-kigrax_fire_bolt
-
-Fire a single Kigrax blaster bolt using the HLIL muzzle offsets and salvo
-aiming deltas.
+kigrax_fire_plasma
 =============
 */
-static void kigrax_fire_bolt (edict_t *self, int shot_index)
+static void kigrax_fire_plasma(edict_t *self)
 {
-	vec3_t start, dir, forward, right, target, aim_angles, shot_angles, shot_dir;
+	vec3_t	forward;
+	vec3_t	right;
+	vec3_t	start;
+	vec3_t	target;
+	vec3_t	dir;
 
-	if (!self->enemy)
-		return;
+	AngleVectors(self->s.angles, forward, right, NULL);
+	G_ProjectSource(self->s.origin, kigrax_plasma_offset, forward, right, start);
 
-	if (shot_index < 0 || shot_index >= ARRAY_LEN(kigrax_salvo_yaw_offsets))
-		shot_index = 0;
+	VectorCopy(self->enemy->s.origin, target);
+	target[2] += self->enemy->viewheight;
 
-	AngleVectors (self->s.angles, forward, right, NULL);
-	G_ProjectSource (self->s.origin, monster_flash_offset[MZ2_HOVER_BLASTER_1], forward, right, start);
+	VectorSubtract(target, start, dir);
 
-	VectorCopy (self->enemy->s.origin, target);
-	target[2] += self->enemy->viewheight * 0.5f;
+	fire_plasma_bolt(self, start, dir, KIGRAX_PLASMA_DAMAGE, KIGRAX_PLASMA_SPEED,
+			KIGRAX_PLASMA_TYPE);
 
-	VectorSubtract (target, start, dir);
-	VectorNormalize (dir);
-	vectoangles (dir, aim_angles);
-
-	VectorCopy (aim_angles, shot_angles);
-	shot_angles[YAW] += kigrax_salvo_yaw_offsets[shot_index];
-	shot_angles[PITCH] += kigrax_salvo_pitch_offsets[shot_index];
-	shot_angles[ROLL] = 0.0f;
-	AngleVectors (shot_angles, shot_dir, NULL, NULL);
-
-	monster_fire_blaster (self, start, shot_dir, 8, 1000, MZ2_HOVER_BLASTER_1, EF_BLASTER);
-}
-
-/*
-=============
-kigrax_attack_salvo
-
-Mirror the HLIL 0x1002f030 helper by toggling the crouched hull, emitting the
-four-shot burst with retail spacing, and restoring the standing hull before
-returning to the strafing selector.
-=============
-*/
-static void kigrax_attack_salvo (edict_t *self)
-{
-	if (!(self->monsterinfo.aiflags & AI_DUCKED))
-	{
-		kigrax_set_attack_hull (self, true);
-		self->monsterinfo.aiflags |= AI_HOLD_FRAME;
-		gi.sound (self, CHAN_WEAPON, sound_attack, 1.0f, ATTN_NORM, 0.0f);
-		self->count = 0;
-		self->timestamp = level.time;
-	}
-
-	if (!self->enemy)
-	{
-		kigrax_set_attack_hull (self, false);
-		self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
-		self->count = ARRAY_LEN(kigrax_salvo_yaw_offsets);
-		self->timestamp = 0.0f;
-		self->monsterinfo.nextframe = self->s.frame + 1;
-		kigrax_run_select (self);
-		return;
-	}
-
-	if ((self->monsterinfo.aiflags & AI_DUCKED) && self->count < ARRAY_LEN(kigrax_salvo_yaw_offsets))
-	{
-		while (self->count < ARRAY_LEN(kigrax_salvo_yaw_offsets) && level.time >= self->timestamp)
-		{
-			kigrax_fire_bolt (self, self->count);
-			self->count++;
-			self->timestamp += KIGRAX_SALVO_INTERVAL;
-		}
-
-		if (self->count < ARRAY_LEN(kigrax_salvo_yaw_offsets))
-		{
-			self->monsterinfo.aiflags |= AI_HOLD_FRAME;
-			return;
-		}
-
-		self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
-		self->monsterinfo.nextframe = self->s.frame + 1;
-	}
-
-	if (self->s.frame == KIGRAX_FRAME_ATTACK_END)
-	{
-		self->timestamp = 0.0f;
-		self->count = 0;
-		self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
-		kigrax_set_attack_hull (self, false);
-		kigrax_run_select (self);
-	}
-}
-
-/*
-=============
-kigrax_begin_pain_stagger
-
-Record the HLIL stagger window so the final pain frame can keep looping
-until the timer expires.
-=============
-*/
-static void kigrax_begin_pain_stagger (edict_t *self)
-{
-	self->timestamp = level.time + KIGRAX_PAIN_STAGGER_TIME;
-}
-
-/*
-=============
-kigrax_end_pain
-
-Hold the final pain frame until the stagger timer elapses before allowing the
-mmove end callback to resume strafing.
-=============
-*/
-static void kigrax_end_pain (edict_t *self)
-{
-	if (level.time < self->timestamp)
-	{
-		self->monsterinfo.aiflags |= AI_HOLD_FRAME;
-		self->monsterinfo.nextframe = KIGRAX_FRAME_PAIN_END;
-		return;
-	}
-
-	self->monsterinfo.aiflags &= ~AI_HOLD_FRAME;
-	self->timestamp = 0.0f;
-	kigrax_run_select (self);
-}
-
-/*
-=============
-kigrax_spawn_debris
-
-Emit a metallic gib so the death animation mirrors the HLIL debris spray.
-=============
-*/
-static void kigrax_spawn_debris (edict_t *self)
-{
-	ThrowGib (self, "models/objects/gibs/sm_meat/tris.md2", 10, GIB_ORGANIC);
-}
-
-
-/*
-=============
-kigrax_attack
-
-Kick off the HLIL attack chain (prep hover → burst → run selector) while
-throttling repeated bursts via attack_finished.
-=============
-*/
-static void kigrax_attack (edict_t *self)
-{
-	self->monsterinfo.attack_finished = level.time + 1.2f;
-	self->monsterinfo.currentmove = &kigrax_move_attack_prep;
+	gi.WriteByte(svc_muzzleflash2);
+	gi.WriteShort(self - g_edicts);
+	gi.WriteByte(KIGRAX_PLASMA_FLASH);
+	gi.multicast(start, MULTICAST_PVS);
 }
 
 /*
@@ -538,58 +393,33 @@ static void kigrax_attack (edict_t *self)
 kigrax_pain
 =============
 */
-static void kigrax_pain (edict_t *self, edict_t *other, float kick, int damage)
+static void kigrax_pain(edict_t *self, edict_t *other, float kick, int damage)
 {
 	if (level.time < self->pain_debounce_time)
 		return;
 
-	self->pain_debounce_time = level.time + KIGRAX_PAIN_COOLDOWN;
+	self->pain_debounce_time = level.time + KIGRAX_PAIN_DELAY;
 
-	if (random () < 0.5f)
-		gi.sound (self, CHAN_VOICE, sound_pain, 1.0f, ATTN_NORM, 0.0f);
-	else
-		gi.sound (self, CHAN_VOICE, sound_pain_strong, 1.0f, ATTN_NORM, 0.0f);
+	if (skill->value == 3)
+		return;
 
+	gi.sound(self, CHAN_VOICE, sound_pain, 1.0f, ATTN_NORM, 0.0f);
 	self->monsterinfo.currentmove = &kigrax_move_pain;
 }
 
 /*
 =============
-kigrax_deadthink
-
-Wait for the corpse to land, then trigger the hover-style explosion cleanup.
-=============
-*/
-static void kigrax_deadthink (edict_t *self)
-{
-	if (!self->groundentity && level.time < self->timestamp)
-{
-		self->nextthink = level.time + FRAMETIME;
-		return;
-}
-
-	BecomeExplosion1 (self);
-}
-
-/*
-=============
 kigrax_dead
-
-Mirror the hover corpse routine by swapping to a toss hull and scheduling the
-timed explosion thinker recovered from the HLIL dump.
 =============
 */
-static void kigrax_dead (edict_t *self)
+static void kigrax_dead(edict_t *self)
 {
-	VectorSet (self->mins, -16.0f, -16.0f, -24.0f);
-	VectorSet (self->maxs, 16.0f, 16.0f, -8.0f);
+	VectorSet(self->mins, -16.0f, -16.0f, -16.0f);
+	VectorSet(self->maxs, 16.0f, 16.0f, 0.0f);
 	self->movetype = MOVETYPE_TOSS;
-	self->think = kigrax_deadthink;
-	self->nextthink = level.time + FRAMETIME;
-	self->timestamp = level.time + 15.0f;
-	self->deadflag = DEAD_DEAD;
-	self->takedamage = DAMAGE_YES;
-	gi.linkentity (self);
+	self->svflags |= SVF_DEADMONSTER;
+	self->nextthink = 0.0f;
+	gi.linkentity(self);
 }
 
 /*
@@ -597,76 +427,88 @@ static void kigrax_dead (edict_t *self)
 kigrax_die
 =============
 */
-static void kigrax_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+static void kigrax_die(edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
 {
-	if (self->health <= self->gib_health)
+	int	n;
+
+	if (meansOfDeath == 0x23)
 	{
-		gi.sound (self, CHAN_VOICE, gi.soundindex ("misc/udeath.wav"), 1.0f, ATTN_NORM, 0.0f);
-		ThrowGib (self, "models/objects/gibs/sm_meat/tris.md2", damage, GIB_ORGANIC);
-		ThrowGib (self, "models/objects/gibs/sm_meat/tris.md2", damage, GIB_ORGANIC);
-		ThrowHead (self, "models/objects/gibs/head2/tris.md2", damage, GIB_ORGANIC);
+		BecomeExplosion1(self);
 		return;
 	}
 
-	gi.sound (self, CHAN_VOICE, sound_death, 1.0f, ATTN_NORM, 0.0f);
+	if (self->health <= self->gib_health)
+	{
+		gi.sound(self, CHAN_VOICE, gi.soundindex("misc/udeath.wav"), 1.0f, ATTN_NORM, 0.0f);
+		for (n = 0; n < 2; n++)
+			ThrowGib(self, "models/objects/gibs/bone/tris.md2", damage, GIB_ORGANIC);
+		for (n = 0; n < 2; n++)
+			ThrowGib(self, "models/objects/gibs/sm_meat/tris.md2", damage, GIB_ORGANIC);
+		ThrowHead(self, "models/objects/gibs/sm_meat/tris.md2", damage, GIB_ORGANIC);
+		self->deadflag = DEAD_DEAD;
+		return;
+	}
+
+	if (self->deadflag == DEAD_DEAD)
+		return;
+
+	self->deadflag = DEAD_DEAD;
+	self->takedamage = DAMAGE_YES;
 	self->monsterinfo.currentmove = &kigrax_move_death;
 }
 
 /*
 =============
 SP_monster_kigrax
-
-Register the hovering Kigrax sentry and align its spawn defaults with the
-extracted HLIL manifest.
 =============
 */
-void SP_monster_kigrax (edict_t *self)
+void SP_monster_kigrax(edict_t *self)
 {
 	if (deathmatch->value)
 	{
-		G_FreeEdict (self);
+		G_FreeEdict(self);
 		return;
 	}
 
-	kigrax_init_moves ();
+	kigrax_init_moves();
 
-	self->s.modelindex = gi.modelindex ("models/monsters/kigrax/tris.md2");
-	VectorSet (self->mins, -20.0f, -20.0f, -32.0f);
-	VectorSet (self->maxs, 20.0f, 20.0f, 12.0f);
-	self->movetype = MOVETYPE_STEP;
-	self->solid = SOLID_BBOX;
-	self->flags |= FL_FLY;
-	self->mass = 150;
-	self->yaw_speed = 20.0f;
+	self->s.modelindex = gi.modelindex("models/monsters/kigrax/tris.md2");
 
-	sound_sight = gi.soundindex ("hover/hovsght1.wav");
-	sound_search = gi.soundindex ("hover/hovsrch1.wav");
-	sound_idle = gi.soundindex ("kigrax/hovidle1.wav");
-	sound_pain = gi.soundindex ("hover/hovpain1.wav");
-	sound_pain_strong = gi.soundindex ("hover/hovpain2.wav");
-	sound_death = gi.soundindex ("hover/hovdeth1.wav");
-	sound_attack = gi.soundindex ("kigrax/hovatck1.wav");
+	sound_pain = gi.soundindex("hover/hovpain1.wav");
+	sound_death = gi.soundindex("hover/hovdeth1.wav");
+	sound_sight = gi.soundindex("hover/hovsght1.wav");
+	sound_search1 = gi.soundindex("hover/hovsrch1.wav");
+	sound_search2 = gi.soundindex("hover/hovsrch2.wav");
+	sound_attack = gi.soundindex("chick/chkatck3.wav");
+	gi.soundindex("kigrax/hovatck1.wav");
+	sound_idle = gi.soundindex("kigrax/hovidle1.wav");
 
 	self->s.sound = sound_idle;
 
+	VectorSet(self->mins, -20.0f, -20.0f, -32.0f);
+	VectorSet(self->maxs, 20.0f, 20.0f, 12.0f);
+	self->movetype = MOVETYPE_STEP;
+	self->solid = SOLID_BBOX;
 	self->health = 200;
 	self->gib_health = -100;
+	self->mass = 150;
 	self->viewheight = 90;
 
 	self->pain = kigrax_pain;
 	self->die = kigrax_die;
 
-	self->monsterinfo.stand = kigrax_idle_select;
-	self->monsterinfo.idle = kigrax_idle_select;
-	self->monsterinfo.walk = kigrax_walk_select;
-	self->monsterinfo.run = kigrax_run_select;
+	self->monsterinfo.stand = kigrax_stand;
+	self->monsterinfo.idle = kigrax_stand;
+	self->monsterinfo.walk = kigrax_walk;
+	self->monsterinfo.run = kigrax_run;
 	self->monsterinfo.attack = kigrax_attack;
-	self->monsterinfo.melee = NULL;
+	self->monsterinfo.melee = kigrax_melee;
 	self->monsterinfo.sight = kigrax_sight;
 	self->monsterinfo.search = kigrax_search;
-	self->monsterinfo.aiflags |= AI_FLOAT;
 	self->monsterinfo.scale = 1.0f;
 
-	kigrax_idle_select (self);
-	flymonster_start (self);
+	gi.linkentity(self);
+
+	self->monsterinfo.currentmove = &kigrax_move_stand;
+	flymonster_start(self);
 }

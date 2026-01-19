@@ -2,6 +2,8 @@
 #ifndef M_CYBORG_H
 #define M_CYBORG_H
 
-void SP_monster_cyborg(edict_t *self);
+struct edict_s;
+
+void SP_monster_cyborg(struct edict_s *self);
 
 #endif

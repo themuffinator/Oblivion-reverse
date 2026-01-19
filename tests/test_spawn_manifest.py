@@ -140,7 +140,7 @@ class SpawnManifestSnapshotTest(unittest.TestCase):
                 "defaults": {
                     "health": 400.0,
                     "mass": 300.0,
-                    "gib_health": -120.0,
+                    "gib_health": -175.0,
                 },
                 "spawnflags": {
                     "checks": [8],

@@ -22,6 +22,8 @@
 #define MOD_DETPACK 48
 #define MOD_MINE 49
 #define MOD_MINE_SPLASH 50
+#define MOD_REMOTE_DETONATOR 51
+#define MOD_REMOTE_CANNON 52
 
 // Spawnflags (SVF_) or Entity Flags (FL_)
 // Using available bits where possible.

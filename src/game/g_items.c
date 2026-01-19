@@ -597,7 +597,7 @@ qboolean Pickup_Ammo(edict_t *ent, edict_t *other) {
   if (weapon && !oldcount) {
     if (other->client->pers.weapon != ent->item &&
         (!deathmatch->value ||
-         other->client->pers.weapon == FindItem("blaster")))
+         other->client->pers.weapon == FindItem("Plasma Pistol")))
       other->client->newweapon = ent->item;
   }
 
@@ -1258,7 +1258,7 @@ gitem_t itemlist[] = {
      /* pickup */ "Plasma Pistol", 0, 1, "PistolPlasma",
      IT_WEAPON | IT_STAY_COOP, WEAP_PLASMA_PISTOL, NULL, 0,
      /* precache */
-     "sound/weapons/plasma1/fire.wav sound/weapons/plasma1/hit.wav"},
+     "plasma1/fire.wav plasma1/hit.wav"},
 
     /* weapon_blaster (.3 .3 1) (-16 -16 -16) (16 16 16)
     always owned, never in the world
@@ -1459,7 +1459,7 @@ gitem_t itemlist[] = {
      /* pickup */ "Plasma Rifle", 0, 5, "Rifle Plasma",
      IT_WEAPON | IT_STAY_COOP, WEAP_PLASMA_RIFLE, NULL, 0,
      /* precache */
-     "sound/weapons/plasma2/fire.wav sound/weapons/plasma2/hit.wav"},
+     "plasma2/fire.wav plasma2/hit.wav"},
 
 /*QUAKED weapon_lasercannon (.3 .3 1) (-16 -16 -16) (16 16 16)
  */
@@ -1595,8 +1595,126 @@ gitem_t itemlist[] = {
      /* pickup */ "Ancient Head",
      /* width */ 2, 60, NULL, 0, 0, NULL, 0,
      /* precache */ ""},
+
+	{NULL, Pickup_Health, NULL, NULL, NULL, "items/pkup.wav", NULL, 0, NULL,
+	 /* icon */ "i_health",
+	 /* pickup */ "Health",
+	 /* width */ 3, 0, NULL, 0, 0, NULL, 0,
+	 /* precache */
+	 "items/s_health.wav items/n_health.wav items/l_health.wav items/m_health.wav"},
     {NULL}};
+
+/*QUAKED item_health (.3 .3 1) (-16 -16 -16) (16 16 16)
+ */
+/*
+=================
+SP_item_health
+=================
+*/
+void SP_item_health(edict_t *self)
+{
+	if (deathmatch->value && ((int)dmflags->value & DF_NO_HEALTH))
+	{
+		G_FreeEdict(self);
+		return;
+	}
+
+	self->model = "models/items/healing/medium/tris.md2";
+	self->count = 10;
+	SpawnItem(self, FindItem("Health"));
+	gi.soundindex("items/n_health.wav");
+}
+
+/*QUAKED item_health_small (.3 .3 1) (-16 -16 -16) (16 16 16)
+ */
+/*
+=================
+SP_item_health_small
+=================
+*/
+void SP_item_health_small(edict_t *self)
+{
+	if (deathmatch->value && ((int)dmflags->value & DF_NO_HEALTH))
+	{
+		G_FreeEdict(self);
+		return;
+	}
+
+	self->model = "models/items/healing/stimpack/tris.md2";
+	self->count = 2;
+	SpawnItem(self, FindItem("Health"));
+	self->style = HEALTH_IGNORE_MAX;
+	gi.soundindex("items/s_health.wav");
+}
+
+/*QUAKED item_health_large (.3 .3 1) (-16 -16 -16) (16 16 16)
+ */
+/*
+=================
+SP_item_health_large
+=================
+*/
+void SP_item_health_large(edict_t *self)
+{
+	if (deathmatch->value && ((int)dmflags->value & DF_NO_HEALTH))
+	{
+		G_FreeEdict(self);
+		return;
+	}
+
+	self->model = "models/items/healing/large/tris.md2";
+	self->count = 25;
+	SpawnItem(self, FindItem("Health"));
+	gi.soundindex("items/l_health.wav");
+}
+
+/*QUAKED item_health_mega (.3 .3 1) (-16 -16 -16) (16 16 16)
+ */
+/*
+=================
+SP_item_health_mega
+=================
+*/
+void SP_item_health_mega(edict_t *self)
+{
+	if (deathmatch->value && ((int)dmflags->value & DF_NO_HEALTH))
+	{
+		G_FreeEdict(self);
+		return;
+	}
+
+	self->model = "models/items/mega_h/tris.md2";
+	self->count = 100;
+	SpawnItem(self, FindItem("Health"));
+	gi.soundindex("items/m_health.wav");
+	self->style = HEALTH_IGNORE_MAX | HEALTH_TIMED;
+}
 
 void InitItems(void) {
   game.num_items = sizeof(itemlist) / sizeof(itemlist[0]) - 1;
+}
+
+/*
+===============
+SetItemNames
+
+Called by worldspawn
+===============
+*/
+void SetItemNames(void)
+{
+	int		i;
+	gitem_t	*it;
+
+	for (i = 0; i < game.num_items; i++)
+	{
+		it = &itemlist[i];
+		gi.configstring(CS_ITEMS + i, it->pickup_name);
+	}
+
+	jacket_armor_index = ITEM_INDEX(FindItem("Jacket Armor"));
+	combat_armor_index = ITEM_INDEX(FindItem("Combat Armor"));
+	body_armor_index = ITEM_INDEX(FindItem("Body Armor"));
+	power_screen_index = ITEM_INDEX(FindItem("Power Screen"));
+	power_shield_index = ITEM_INDEX(FindItem("Power Shield"));
 }

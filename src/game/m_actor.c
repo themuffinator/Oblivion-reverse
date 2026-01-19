@@ -26,21 +26,40 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define	MAX_ACTOR_NAMES		8
 #define ACTOR_CHAT_COOLDOWN	2.0f
 
+// HLIL frame indices for the Oblivion actor model.
+enum
+{
+	ACTOR_FRAME_STAND_FIRST = 0,
+	ACTOR_FRAME_STAND_LAST = 39,
+	ACTOR_FRAME_WALK_FIRST = 40,
+	ACTOR_FRAME_WALK_LAST = 45,
+	ACTOR_FRAME_RUN_FIRST = 40,
+	ACTOR_FRAME_RUN_LAST = 45,
+	ACTOR_FRAME_ATTACK_FIRST = 46,
+	ACTOR_FRAME_ATTACK_LAST = 53,
+	ACTOR_FRAME_PAIN1_FIRST = 54,
+	ACTOR_FRAME_PAIN1_LAST = 57,
+	ACTOR_FRAME_PAIN2_FIRST = 58,
+	ACTOR_FRAME_PAIN2_LAST = 61,
+	ACTOR_FRAME_PAIN3_FIRST = 62,
+	ACTOR_FRAME_PAIN3_LAST = 65,
+	ACTOR_FRAME_FLIPOFF_FIRST = 72,
+	ACTOR_FRAME_FLIPOFF_LAST = 83,
+	ACTOR_FRAME_TAUNT_FIRST = 95,
+	ACTOR_FRAME_TAUNT_LAST = 95,
+	ACTOR_FRAME_DEATH1_FIRST = 178,
+	ACTOR_FRAME_DEATH1_LAST = 183,
+	ACTOR_FRAME_DEATH2_FIRST = 184,
+	ACTOR_FRAME_DEATH2_LAST = 189,
+	ACTOR_FRAME_DEATH3_FIRST = 190,
+	ACTOR_FRAME_DEATH3_LAST = 197
+};
+
 extern mmove_t actor_move_stand;
 extern mmove_t actor_move_flipoff;
 extern mmove_t actor_move_taunt;
 
 static void Actor_PathAssignController(edict_t *self, edict_t *controller);
-
-/*
- * Oblivion extends the Quake II actor AI flags with additional high bits
- * that coordinate scripted mission controllers.  Use local names so the
- * spawn routine can describe the behaviour from the HLIL dump without
- * resorting to raw literals.
- */
-#define	AI_ACTOR_SHOOT_ONCE		0x04000000
-#define	AI_ACTOR_PATH_IDLE		0x02000000
-#define	AI_ACTOR_FRIENDLY		0x01000000
 
 /* misc_actor spawnflags are declared in m_actor.h */
 
@@ -242,9 +261,9 @@ static void Actor_PathResetState(edict_t *self)
 Actor_ApplySpawnAIFeatures
 
 Mirror the `sub_1001f460` HLIL writes so the actor spawn only touches
-`AI_ACTOR_PATH_IDLE`, `AI_ACTOR_FRIENDLY`, `AI_GOOD_GUY`, and
-`AI_STAND_GROUND` the way the retail DLL does so Wimpy actors drop their
-friendly state while normal actors retain it.
+`AI_ACTOR_PATH_IDLE`, `AI_ACTOR_FRIENDLY`, and `AI_STAND_GROUND` the way
+the retail DLL does so Wimpy actors drop their friendly state while normal
+actors retain it.
 =============
 */
 static void Actor_ApplySpawnAIFeatures(edict_t *self)
@@ -260,9 +279,9 @@ static void Actor_ApplySpawnAIFeatures(edict_t *self)
 		self->monsterinfo.aiflags |= AI_ACTOR_PATH_IDLE;
 
 	if (spawnflags & ACTOR_SPAWNFLAG_WIMPY)
-		self->monsterinfo.aiflags &= ~(AI_ACTOR_FRIENDLY | AI_GOOD_GUY);
+		self->monsterinfo.aiflags &= ~AI_ACTOR_FRIENDLY;
 	else
-		self->monsterinfo.aiflags |= (AI_ACTOR_FRIENDLY | AI_GOOD_GUY);
+		self->monsterinfo.aiflags |= AI_ACTOR_FRIENDLY;
 
 	self->monsterinfo.aiflags |= AI_STAND_GROUND;
 }
@@ -775,7 +794,7 @@ mframe_t actor_frames_stand [] =
 	ai_stand, 0, NULL,
 	ai_stand, 0, NULL
 };
-mmove_t actor_move_stand = {FRAME_stand101, FRAME_stand140, actor_frames_stand, NULL};
+mmove_t actor_move_stand = {ACTOR_FRAME_STAND_FIRST, ACTOR_FRAME_STAND_LAST, actor_frames_stand, NULL};
 
 void actor_stand (edict_t *self)
 {
@@ -789,45 +808,26 @@ void actor_stand (edict_t *self)
 
 mframe_t actor_frames_walk [] =
 {
-	ai_walk, 0,  NULL,
-	ai_walk, 6,  NULL,
-	ai_walk, 10, NULL,
-	ai_walk, 3,  NULL,
-	ai_walk, 2,  NULL,
-	ai_walk, 7,  NULL,
-	ai_walk, 10, NULL,
-	ai_walk, 1,  NULL,
-	ai_walk, 4,  NULL,
-	ai_walk, 0,  NULL,
-	ai_walk, 0,  NULL
+	ai_walk, 8,  NULL,
+	ai_walk, 30, NULL,
+	ai_walk, 30, NULL,
+	ai_walk, 16, NULL,
+	ai_walk, 40, NULL,
+	ai_walk, 30, NULL
 };
-mmove_t actor_move_walk = {FRAME_walk01, FRAME_walk08, actor_frames_walk, NULL};
+mmove_t actor_move_walk = {ACTOR_FRAME_WALK_FIRST, ACTOR_FRAME_WALK_LAST, actor_frames_walk, NULL};
 
 /*
 =============
 actor_walk
 
-Synchronise the actor walk cycle with the Oblivion path state machine.
+Select the actor walk cycle.
 =============
 */
 void actor_walk (edict_t *self)
 {
 	if (!self)
 		return;
-
-	self->monsterinfo.aiflags &= ~AI_ACTOR_PATH_IDLE;
-
-	if (self->oblivion.path_state != ACTOR_PATH_STATE_WAITING)
-	{
-		self->oblivion.path_state = ACTOR_PATH_STATE_SEEKING;
-		self->oblivion.path_time = level.time;
-	}
-
-	if (self->oblivion.controller && !self->enemy)
-	{
-		self->goalentity = self->oblivion.controller;
-		self->movetarget = self->oblivion.controller;
-	}
 
 	self->monsterinfo.currentmove = &actor_move_walk;
 }
@@ -836,45 +836,26 @@ void actor_walk (edict_t *self)
 
 mframe_t actor_frames_run [] =
 {
-	ai_run, 4,  NULL,
-	ai_run, 15, NULL,
-	ai_run, 15, NULL,
 	ai_run, 8,  NULL,
-	ai_run, 20, NULL,
-	ai_run, 15, NULL,
-	ai_run, 8,  NULL,
-	ai_run, 17, NULL,
-	ai_run, 12, NULL,
-	ai_run, -2, NULL,
-	ai_run, -2, NULL,
-	ai_run, -1, NULL
+	ai_run, 30, NULL,
+	ai_run, 30, NULL,
+	ai_run, 16, NULL,
+	ai_run, 40, NULL,
+	ai_run, 30, NULL
 };
-mmove_t actor_move_run = {FRAME_run02, FRAME_run07, actor_frames_run, NULL};
+mmove_t actor_move_run = {ACTOR_FRAME_RUN_FIRST, ACTOR_FRAME_RUN_LAST, actor_frames_run, NULL};
 
 /*
 =============
 actor_run
 
-Advance the actor's run behaviour, clearing single-shot locks before
-resuming scripted movement after scripted attacks.
+Run toward the current goal while respecting pain and stand-ground holds.
 =============
 */
 void actor_run (edict_t *self)
 {
 	if (!self)
 		return;
-
-	if (self->monsterinfo.aiflags & AI_ACTOR_SHOOT_ONCE)
-	{
-		self->monsterinfo.aiflags &= ~(AI_ACTOR_SHOOT_ONCE | AI_STAND_GROUND);
-		self->enemy = NULL;
-
-		if (self->movetarget)
-		{
-			self->goalentity = self->movetarget;
-			self->monsterinfo.aiflags &= ~AI_ACTOR_PATH_IDLE;
-		}
-	}
 
 	if ((level.time < self->pain_debounce_time) && (!self->enemy))
 	{
@@ -891,21 +872,6 @@ void actor_run (edict_t *self)
 		return;
 	}
 
-	self->monsterinfo.aiflags &= ~AI_ACTOR_PATH_IDLE;
-
-	if (self->oblivion.path_state != ACTOR_PATH_STATE_WAITING)
-	{
-		self->oblivion.path_state = ACTOR_PATH_STATE_SEEKING;
-		self->oblivion.path_time = level.time;
-	}
-
-	if (self->oblivion.controller && !self->enemy)
-	{
-		self->goalentity = self->oblivion.controller;
-		if (!self->movetarget)
-			self->movetarget = self->oblivion.controller;
-	}
-
 	self->monsterinfo.currentmove = &actor_move_run;
 }
 
@@ -916,25 +882,28 @@ mframe_t actor_frames_pain1 [] =
 {
 	ai_move, -5, NULL,
 	ai_move, 4,  NULL,
+	ai_move, 1,  NULL,
 	ai_move, 1,  NULL
 };
-mmove_t actor_move_pain1 = {FRAME_pain101, FRAME_pain103, actor_frames_pain1, actor_run};
+mmove_t actor_move_pain1 = {ACTOR_FRAME_PAIN1_FIRST, ACTOR_FRAME_PAIN1_LAST, actor_frames_pain1, actor_run};
 
 mframe_t actor_frames_pain2 [] =
 {
 	ai_move, -4, NULL,
+	ai_move, 0,  NULL,
 	ai_move, 4,  NULL,
 	ai_move, 0,  NULL
 };
-mmove_t actor_move_pain2 = {FRAME_pain201, FRAME_pain203, actor_frames_pain2, actor_run};
+mmove_t actor_move_pain2 = {ACTOR_FRAME_PAIN2_FIRST, ACTOR_FRAME_PAIN2_LAST, actor_frames_pain2, actor_run};
 
 mframe_t actor_frames_pain3 [] =
 {
 	ai_move, -1, NULL,
+	ai_move, -1, NULL,
 	ai_move, 1,  NULL,
 	ai_move, 0,  NULL
 };
-mmove_t actor_move_pain3 = {FRAME_pain301, FRAME_pain303, actor_frames_pain3, actor_run};
+mmove_t actor_move_pain3 = {ACTOR_FRAME_PAIN3_FIRST, ACTOR_FRAME_PAIN3_LAST, actor_frames_pain3, actor_run};
 
 mframe_t actor_frames_flipoff [] =
 {
@@ -949,33 +918,15 @@ mframe_t actor_frames_flipoff [] =
 	ai_turn, 0,  NULL,
 	ai_turn, 0,  NULL,
 	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
 	ai_turn, 0,  NULL
 };
-mmove_t actor_move_flipoff = {FRAME_flip01, FRAME_flip14, actor_frames_flipoff, actor_run};
+mmove_t actor_move_flipoff = {ACTOR_FRAME_FLIPOFF_FIRST, ACTOR_FRAME_FLIPOFF_LAST, actor_frames_flipoff, actor_run};
 
 mframe_t actor_frames_taunt [] =
 {
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
-	ai_turn, 0,  NULL,
 	ai_turn, 0,  NULL
 };
-mmove_t actor_move_taunt = {FRAME_taunt01, FRAME_taunt17, actor_frames_taunt, actor_run};
+mmove_t actor_move_taunt = {ACTOR_FRAME_TAUNT_FIRST, ACTOR_FRAME_TAUNT_LAST, actor_frames_taunt, actor_run};
 
 static const char *const messages[] =
 {
@@ -988,9 +939,6 @@ static const char *const messages[] =
 void actor_pain (edict_t *self, edict_t *other, float kick, int damage)
 {
 	int		n;
-
-	if (self->health < (self->max_health / 2))
-		self->s.skinnum = 1;
 
 	if (level.time < self->pain_debounce_time)
 		return;
@@ -1069,34 +1017,46 @@ mframe_t actor_frames_death1 [] =
 	ai_move, 0,   NULL,
 	ai_move, 0,   NULL,
 	ai_move, -13, NULL,
+	ai_move, 1,   NULL,
 	ai_move, 14,  NULL,
-	ai_move, 3,   NULL,
-	ai_move, -2,  NULL,
 	ai_move, 1,   NULL
 };
-mmove_t actor_move_death1 = {FRAME_death101, FRAME_death107, actor_frames_death1, actor_dead};
+mmove_t actor_move_death1 = {ACTOR_FRAME_DEATH1_FIRST, ACTOR_FRAME_DEATH1_LAST, actor_frames_death1, actor_dead};
 
 mframe_t actor_frames_death2 [] =
 {
 	ai_move, 0,   NULL,
-	ai_move, 7,   NULL,
 	ai_move, -6,  NULL,
 	ai_move, -5,  NULL,
 	ai_move, 1,   NULL,
-	ai_move, 0,   NULL,
-	ai_move, -1,  NULL,
-	ai_move, -2,  NULL,
-	ai_move, -1,  NULL,
-	ai_move, -9,  NULL,
-	ai_move, -13, NULL,
-	ai_move, -13, NULL,
+	ai_move, 1,   NULL,
 	ai_move, 0,   NULL
 };
-mmove_t actor_move_death2 = {FRAME_death201, FRAME_death213, actor_frames_death2, actor_dead};
+mmove_t actor_move_death2 = {ACTOR_FRAME_DEATH2_FIRST, ACTOR_FRAME_DEATH2_LAST, actor_frames_death2, actor_dead};
+
+mframe_t actor_frames_death3 [] =
+{
+	ai_move, 0,   NULL,
+	ai_move, -6,  NULL,
+	ai_move, -5,  NULL,
+	ai_move, 1,   NULL,
+	ai_move, 1,   NULL,
+	ai_move, 1,   NULL,
+	ai_move, 1,   NULL,
+	ai_move, 0,   NULL
+};
+mmove_t actor_move_death3 = {ACTOR_FRAME_DEATH3_FIRST, ACTOR_FRAME_DEATH3_LAST, actor_frames_death3, actor_dead};
 
 void actor_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
 {
 	int		n;
+
+	// HLIL: disintegrate on MOD 0x23.
+	if (meansOfDeath == 0x23)
+	{
+		BecomeExplosion1(self);
+		return;
+	}
 
 // check for gib
 	if (self->health <= -80)
@@ -1118,12 +1078,15 @@ void actor_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage
 //	gi.sound (self, CHAN_VOICE, actor.sound_die, 1, ATTN_NORM, 0);
 	self->deadflag = DEAD_DEAD;
 	self->takedamage = DAMAGE_YES;
+	self->s.modelindex2 = 0;
 
-	n = rand() % 2;
+	n = rand() % 3;
 	if (n == 0)
 		self->monsterinfo.currentmove = &actor_move_death1;
-	else
+	else if (n == 1)
 		self->monsterinfo.currentmove = &actor_move_death2;
+	else
+		self->monsterinfo.currentmove = &actor_move_death3;
 }
 
 
@@ -1141,10 +1104,14 @@ mframe_t actor_frames_attack [] =
 {
 	ai_charge, -2,  actor_fire,
 	ai_charge, -2,  NULL,
+	ai_charge, 0,   NULL,
+	ai_charge, 0,   NULL,
+	ai_charge, 0,   NULL,
+	ai_charge, 0,   NULL,
 	ai_charge, 3,   NULL,
 	ai_charge, 2,   NULL
 };
-mmove_t actor_move_attack = {FRAME_attak01, FRAME_attak04, actor_frames_attack, actor_run};
+mmove_t actor_move_attack = {ACTOR_FRAME_ATTACK_FIRST, ACTOR_FRAME_ATTACK_LAST, actor_frames_attack, actor_stand};
 
 void actor_attack(edict_t *self)
 {
@@ -1160,43 +1127,36 @@ void actor_attack(edict_t *self)
 =============
 actor_use
 
-Activate the actor's scripted path and schedule the Oblivion think loop.
+Activate the actor's scripted path by binding to the first target_actor.
 =============
 */
 void actor_use (edict_t *self, edict_t *other, edict_t *activator)
 {
-	edict_t *controller;
+	vec3_t	v;
 
-	if (!self)
+	if (!self || !self->target)
 		return;
 
 	(void)other;
 	(void)activator;
 
-	controller = G_PickTarget(self->target);
-	if (!Actor_AttachController(self, controller))
+	self->goalentity = self->movetarget = G_PickTarget(self->target);
+	if (!self->movetarget || strcmp(self->movetarget->classname, "target_actor") != 0)
 	{
 		gi.dprintf("%s has bad target %s at %s\n", self->classname,
-			self->target ? self->target : "<null>", vtos(self->s.origin));
+			self->target, vtos(self->s.origin));
 		self->target = NULL;
-		Actor_PathAssignController(self, NULL);
-		self->monsterinfo.aiflags |= AI_ACTOR_PATH_IDLE;
 		self->monsterinfo.pausetime = 100000000.0f;
 		if (self->monsterinfo.stand)
 			self->monsterinfo.stand(self);
-		self->think = Actor_PathThink;
-		self->nextthink = level.time + FRAMETIME;
 		return;
 	}
 
+	VectorSubtract(self->goalentity->s.origin, self->s.origin, v);
+	self->ideal_yaw = self->s.angles[YAW] = vectoyaw(v);
+	if (self->monsterinfo.walk)
+		self->monsterinfo.walk(self);
 	self->target = NULL;
-	self->oblivion.prev_path = NULL;
-	self->oblivion.path_wait_time = -1.0f;
-	self->oblivion.script_target = NULL;
-	self->oblivion.path_toggle = 0;
-	self->monsterinfo.aiflags &= ~AI_ACTOR_PATH_IDLE;
-	self->think = Actor_PathThink;
-	self->nextthink = level.time + FRAMETIME;
 }
 
 
@@ -1285,7 +1245,6 @@ static qboolean Actor_SpawnOblivion(edict_t *self)
 		self->max_health = self->health;
 	}
 
-	self->speed = 200;
 	self->mass = 200;
 	Actor_PathResetState(self);
 	Actor_ApplySpawnAIFeatures(self);
@@ -1321,8 +1280,7 @@ static qboolean Actor_SpawnOblivion(edict_t *self)
 	gi.linkentity(self);
 	walkmonster_start(self);
 
-	self->use = Actor_UseOblivion;
-	self->prethink = Actor_PreThink;
+	self->use = actor_use;
 
 	if (self->spawnflags & ACTOR_SPAWNFLAG_START_ON)
 	{
@@ -1383,10 +1341,7 @@ void Actor_PostLoad(edict_t *self)
 		Actor_ApplySpawnAIFeatures(self);
 
 	if (!self->use || self->use == monster_use)
-		self->use = Actor_UseOblivion;
-
-	if (!self->prethink)
-		self->prethink = Actor_PreThink;
+		self->use = actor_use;
 }
 
 
@@ -1444,8 +1399,6 @@ void target_actor_touch (edict_t *self, edict_t *other, cplane_t *plane, csurfac
 {
 	vec3_t	v;
 	edict_t *pathtarget_ent;
-	edict_t *next_target;
-	float wait;
 	const int spawnflags = self->spawnflags;
 
 	if (other->movetarget != self)
@@ -1455,13 +1408,6 @@ void target_actor_touch (edict_t *self, edict_t *other, cplane_t *plane, csurfac
 		return;
 
 	other->goalentity = other->movetarget = NULL;
-	other->monsterinfo.aiflags &= ~AI_ACTOR_PATH_IDLE;
-
-	pathtarget_ent = NULL;
-	if (self->pathtarget)
-		pathtarget_ent = G_PickTarget(self->pathtarget);
-
-	other->oblivion.script_target = pathtarget_ent;
 
 	if (self->message)
 	{
@@ -1481,32 +1427,18 @@ void target_actor_touch (edict_t *self, edict_t *other, cplane_t *plane, csurfac
 		}
 	}
 
-	if (spawnflags & TARGET_ACTOR_FLAG_SHOOT)	//shoot
+	if (spawnflags & (TARGET_ACTOR_FLAG_SHOOT | TARGET_ACTOR_FLAG_ATTACK))	//shoot/attack
 	{
+		pathtarget_ent = NULL;
 		if (self->pathtarget)
 			pathtarget_ent = G_PickTarget(self->pathtarget);
 
 		other->enemy = pathtarget_ent;
-		other->goalentity = pathtarget_ent;
-		other->movetarget = pathtarget_ent;
-
-		if (spawnflags & TARGET_ACTOR_FLAG_BRUTAL)
-			other->monsterinfo.aiflags |= AI_BRUTAL;
-
-		other->monsterinfo.aiflags |= AI_STAND_GROUND | AI_ACTOR_SHOOT_ONCE;
-		actor_stand(other);
-
-		if (other->monsterinfo.attack)
-			other->monsterinfo.attack(other);
-		else
-			actor_attack(other);
-	}
-	else if (spawnflags & TARGET_ACTOR_FLAG_ATTACK)	//attack
-	{
-		other->enemy = pathtarget_ent;
 		if (other->enemy)
 		{
 			other->goalentity = other->enemy;
+			if (spawnflags & TARGET_ACTOR_FLAG_SHOOT)
+				other->monsterinfo.aiflags |= AI_ACTOR_SHOOT_ONCE;
 			if (spawnflags & TARGET_ACTOR_FLAG_BRUTAL)
 				other->monsterinfo.aiflags |= AI_BRUTAL;
 			if (spawnflags & (TARGET_ACTOR_FLAG_HOLD | TARGET_ACTOR_FLAG_SHOOT))
@@ -1531,13 +1463,7 @@ void target_actor_touch (edict_t *self, edict_t *other, cplane_t *plane, csurfac
 		self->target = savetarget;
 	}
 
-	next_target = G_PickTarget(self->target);
-	other->movetarget = next_target;
-
-	wait = Actor_PathResolveWait(other, self);
-	Actor_PathAdvance(other, self, next_target);
-	other->oblivion.script_target = pathtarget_ent;
-	Actor_PathApplyWait(other, wait);
+	other->movetarget = G_PickTarget(self->target);
 
 	if (!other->goalentity)
 		other->goalentity = other->movetarget;
