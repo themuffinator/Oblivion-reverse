@@ -51,15 +51,22 @@ jobs:
         env:
           NIGHTLY_STAMP: ${{ needs.metadata.outputs.nightly_stamp }}
           RELEASE_TAG: ${{ needs.metadata.outputs.release_tag }}
-        run: bash scripts/release/nightly-linux.sh
+          OBLIVION_ARCH: x64
+        run: bash scripts/release/nightly-linux.sh x64
       - uses: actions/upload-artifact@v4
         with:
-          name: nightly-linux
+          name: nightly-linux-x64
           path: ${{ steps.package.outputs.archive_path }}
 
   build-macos:
     needs: metadata
     runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - arm64
+          - x64
     steps:
       - uses: actions/checkout@v4
       - id: package
@@ -67,15 +74,22 @@ jobs:
         env:
           NIGHTLY_STAMP: ${{ needs.metadata.outputs.nightly_stamp }}
           RELEASE_TAG: ${{ needs.metadata.outputs.release_tag }}
-        run: bash scripts/release/nightly-macos.sh
+          OBLIVION_ARCH: ${{ matrix.arch }}
+        run: bash scripts/release/nightly-macos.sh ${{ matrix.arch }}
       - uses: actions/upload-artifact@v4
         with:
-          name: nightly-macos
+          name: nightly-macos-${{ matrix.arch }}
           path: ${{ steps.package.outputs.archive_path }}
 
   build-windows:
     needs: metadata
     runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - x86
+          - x64
     steps:
       - uses: actions/checkout@v4
       - id: package
@@ -83,10 +97,11 @@ jobs:
         env:
           NIGHTLY_STAMP: ${{ needs.metadata.outputs.nightly_stamp }}
           RELEASE_TAG: ${{ needs.metadata.outputs.release_tag }}
-        run: ./scripts/release/nightly-windows.ps1
+          OBLIVION_ARCH: ${{ matrix.arch }}
+        run: ./scripts/release/nightly-windows.ps1 -Arch ${{ matrix.arch }}
       - uses: actions/upload-artifact@v4
         with:
-          name: nightly-windows
+          name: nightly-windows-${{ matrix.arch }}
           path: ${{ steps.package.outputs.archive_path }}
 
   release:
@@ -115,6 +130,7 @@ jobs:
             Base version: `${{ needs.metadata.outputs.base_version }}`
             Nightly stamp: `${{ needs.metadata.outputs.nightly_stamp }}`
             
+            Archive names now include both platform and architecture, for example `oblivion-windows-x64-${{ needs.metadata.outputs.release_tag }}.zip`.
             Each archive contains an `oblivion/` folder with the platform game module and `oblivion.cfg`.
           makeLatest: false
           name: ${{ needs.metadata.outputs.release_name }}

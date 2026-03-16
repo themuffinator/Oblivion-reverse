@@ -73,17 +73,17 @@
     <tr>
       <td>Windows</td>
       <td><code>gamex86.dll</code></td>
-      <td>Win32 is the intended target for original Quake II compatibility.</td>
+      <td>Win32 remains the original Quake II target; nightly archives now ship both Win32 and x64 Windows builds.</td>
     </tr>
     <tr>
       <td>Linux</td>
       <td><code>game.so</code></td>
-      <td>Built as a shared module through CMake.</td>
+      <td>Built as a shared module through CMake; nightly archives are published as explicit <code>linux-x64</code> builds.</td>
     </tr>
     <tr>
       <td>macOS</td>
       <td><code>game.dylib</code></td>
-      <td>Built as a shared module through CMake.</td>
+      <td>Built as a shared module through CMake; nightly archives are published for both <code>arm64</code> and <code>x64</code>.</td>
     </tr>
   </tbody>
 </table>
@@ -145,6 +145,7 @@ cmake --build build
 </code></pre>
 
 <p>The resulting module will be placed in <code>build/</code> as <code>game.so</code> on Linux or <code>game.dylib</code> on macOS.</p>
+<p>To force an x64 macOS build on Apple Silicon, add <code>-DCMAKE_OSX_ARCHITECTURES=x86_64</code> when configuring.</p>
 
 <h3>Windows</h3>
 
@@ -156,6 +157,7 @@ cmake --build build --config Release
   The resulting module will be emitted as <code>build/Release/gamex86.dll</code> for Visual Studio generators,
   or <code>build/gamex86.dll</code> for single-config generators.
 </p>
+<p>To produce the additional x64 Windows build, configure with <code>-A x64</code> instead. Windows builds still default to the historical <code>gamex86.dll</code> basename; set <code>-DOBLIVION_WINDOWS_OUTPUT_NAME=&lt;name&gt;</code> if your target source port expects a different x64 DLL name.</p>
 
 <h3>Install A Local Build</h3>
 
@@ -171,6 +173,7 @@ cmake --build build --config Release
 
 <p>
   Nightly release automation builds Linux, macOS, and Windows artifacts from the top-level semantic version stored in <code>VERSION</code>.
+  Archive names include both platform and architecture, for example <code>oblivion-windows-x64-v1.0.0-nightly.20260316.zip</code>.
   Nightly tags use the format <code>v&lt;base-version&gt;-nightly.YYYYMMDD</code>.
 </p>
 

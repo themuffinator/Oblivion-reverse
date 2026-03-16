@@ -1,7 +1,14 @@
+param(
+    [ValidateSet('x86', 'x64')]
+    [string]$Arch = $(if ($env:OBLIVION_ARCH) { $env:OBLIVION_ARCH } else { 'x86' })
+)
+
 $ErrorActionPreference = 'Stop'
 
 $rootDir = Resolve-Path (Join-Path $PSScriptRoot '..\..')
 $versionFile = Join-Path $rootDir 'VERSION'
+$moduleName = if ($env:OBLIVION_WINDOWS_OUTPUT_NAME) { $env:OBLIVION_WINDOWS_OUTPUT_NAME } else { 'gamex86' }
+$generatorPlatform = if ($Arch -eq 'x64') { 'x64' } else { 'Win32' }
 
 if (-not (Test-Path $versionFile)) {
     throw 'Missing VERSION file.'
@@ -14,23 +21,23 @@ if ($baseVersion -notmatch '^[0-9]+\.[0-9]+\.[0-9]+$') {
 
 $nightlyStamp = if ($env:NIGHTLY_STAMP) { $env:NIGHTLY_STAMP } else { (Get-Date).ToUniversalTime().ToString('yyyyMMdd') }
 $releaseTag = if ($env:RELEASE_TAG) { $env:RELEASE_TAG } else { "v$baseVersion-nightly.$nightlyStamp" }
-$buildDir = if ($env:BUILD_DIR) { $env:BUILD_DIR } else { Join-Path $rootDir 'build-nightly-windows' }
-$distRoot = if ($env:DIST_DIR) { $env:DIST_DIR } else { Join-Path $rootDir 'dist\windows' }
+$buildDir = if ($env:BUILD_DIR) { $env:BUILD_DIR } else { Join-Path $rootDir "build-nightly-windows-$Arch" }
+$distRoot = if ($env:DIST_DIR) { $env:DIST_DIR } else { Join-Path $rootDir "dist\windows-$Arch" }
 $stageDir = Join-Path $distRoot 'oblivion'
-$archiveName = "oblivion-windows-$releaseTag.zip"
+$archiveName = "oblivion-windows-$Arch-$releaseTag.zip"
 $archivePath = Join-Path (Join-Path $rootDir 'dist') $archiveName
 
-cmake -S $rootDir -B $buildDir -A Win32 -DCMAKE_BUILD_TYPE=Release -DOBLIVION_ENABLE_LOCAL_DEPLOY=OFF
+cmake -S $rootDir -B $buildDir -A $generatorPlatform -DCMAKE_BUILD_TYPE=Release -DOBLIVION_ENABLE_LOCAL_DEPLOY=OFF "-DOBLIVION_WINDOWS_OUTPUT_NAME=$moduleName"
 cmake --build $buildDir --config Release
 
 $candidates = @(
-    (Join-Path $buildDir 'Release\gamex86.dll'),
-    (Join-Path $buildDir 'gamex86.dll')
+    (Join-Path $buildDir "Release\$moduleName.dll"),
+    (Join-Path $buildDir "$moduleName.dll")
 )
 
 $binaryPath = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
 if (-not $binaryPath) {
-    throw "Unable to find built binary gamex86.dll under $buildDir"
+    throw "Unable to find built binary $moduleName.dll under $buildDir"
 }
 
 if (Test-Path $distRoot) {
@@ -38,7 +45,7 @@ if (Test-Path $distRoot) {
 }
 
 New-Item -ItemType Directory -Path $stageDir -Force | Out-Null
-Copy-Item $binaryPath (Join-Path $stageDir 'gamex86.dll') -Force
+Copy-Item $binaryPath (Join-Path $stageDir "$moduleName.dll") -Force
 Copy-Item (Join-Path $rootDir 'pack\oblivion.cfg') (Join-Path $stageDir 'oblivion.cfg') -Force
 Copy-Item (Join-Path $rootDir 'docs\release-readme.html') (Join-Path $stageDir 'README.html') -Force
 
@@ -55,6 +62,7 @@ if ($env:GITHUB_OUTPUT) {
     Add-Content -Path $env:GITHUB_OUTPUT -Value "archive_name=$archiveName"
     Add-Content -Path $env:GITHUB_OUTPUT -Value "release_tag=$releaseTag"
     Add-Content -Path $env:GITHUB_OUTPUT -Value "base_version=$baseVersion"
+    Add-Content -Path $env:GITHUB_OUTPUT -Value "arch=$Arch"
 }
 
 Write-Host "Created $archivePath"

@@ -94,7 +94,7 @@
     <ol>
       <li>Install the original Oblivion mod first from <a href="https://www.celephais.net/oblivion/main.html">the original Oblivion release page</a>.</li>
       <li>Locate the Quake II installation that already contains the installed <code>oblivion/</code> game directory.</li>
-      <li>Extract this release archive directly into that Quake II installation.</li>
+      <li>Extract the matching platform-and-architecture release archive directly into that Quake II installation.</li>
       <li>Allow the extraction to replace the existing platform binary and <code>oblivion.cfg</code>.</li>
       <li>Launch Quake II with <code>+set game oblivion</code>.</li>
     </ol>
@@ -102,25 +102,29 @@
     <p>This archive is an update for an existing Oblivion installation, not a standalone distribution of the full mod data.</p>
 
     <h2>Included Binary Names</h2>
-    <p>The original retail Oblivion release was Windows-only. This reconstruction provides replacement game-module binaries for Windows, Linux, and macOS.</p>
+    <p>The original retail Oblivion release was Windows-only. This reconstruction provides replacement game-module binaries for Windows, Linux, and macOS. Archive names include the target platform and architecture, for example <code>oblivion-windows-x64-v1.0.0-nightly.20260316.zip</code>.</p>
     <table>
       <thead>
         <tr>
           <th>Platform</th>
+          <th>Architecture</th>
           <th>Binary</th>
         </tr>
       </thead>
       <tbody>
         <tr>
           <td>Windows</td>
+          <td>Win32 or x64</td>
           <td><code>gamex86.dll</code></td>
         </tr>
         <tr>
           <td>Linux</td>
+          <td>x64</td>
           <td><code>game.so</code></td>
         </tr>
         <tr>
           <td>macOS</td>
+          <td>arm64 or x64</td>
           <td><code>game.dylib</code></td>
         </tr>
       </tbody>

@@ -21,14 +21,30 @@ cmake --build build
 
 The resulting shared object is placed in `build/` as `game.so` (or `game.dylib` on macOS).
 
+To force an x64 macOS build on Apple Silicon, configure with:
+
+```bash
+cmake -S . -B build-x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=x86_64
+cmake --build build-x64
+```
+
 ## Configure and build (Windows)
 
 ```powershell
-cmake -S . -B build
+cmake -S . -B build -A Win32 -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release
 ```
 
 The resulting DLL will be emitted as `build/Release/gamex86.dll` for Visual Studio generators, or `build/gamex86.dll` for single-config generators.
+
+To build the additional x64 Windows variant:
+
+```powershell
+cmake -S . -B build-x64 -A x64 -DCMAKE_BUILD_TYPE=Release
+cmake --build build-x64 --config Release
+```
+
+Windows builds still default to the historical `gamex86.dll` basename. If your target source port expects a different x64 DLL name, set `-DOBLIVION_WINDOWS_OUTPUT_NAME=<name>` when configuring.
 
 ### Notes
 
@@ -43,22 +59,24 @@ The resulting DLL will be emitted as `build/Release/gamex86.dll` for Visual Stud
 Nightly packaging scripts are provided for Linux, macOS, and Windows:
 
 ```bash
-bash scripts/release/nightly-linux.sh
-bash scripts/release/nightly-macos.sh
+bash scripts/release/nightly-linux.sh x64
+bash scripts/release/nightly-macos.sh arm64
+bash scripts/release/nightly-macos.sh x64
 ```
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/release/nightly-windows.ps1
+powershell -ExecutionPolicy Bypass -File scripts/release/nightly-windows.ps1 -Arch x86
+powershell -ExecutionPolicy Bypass -File scripts/release/nightly-windows.ps1 -Arch x64
 ```
 
 Each script:
 
 - reads the base semantic version from `VERSION`
-- builds a release binary for its platform
+- builds a release binary for its requested platform/architecture pair
 - stages an `oblivion/` folder containing the platform binary, `pack/oblivion.cfg`, and `README.html`
-- writes a versioned archive under `dist/` (`.tar.gz` on Linux/macOS, `.zip` on Windows)
+- writes a versioned archive under `dist/` (`.tar.gz` on Linux/macOS, `.zip` on Windows) with names such as `oblivion-macos-x64-v1.0.0-nightly.20260316.tar.gz`
 
-The GitHub Actions workflow at `.github/workflows/nightly-release.yml` runs these scripts on a nightly schedule and publishes the generated archives as a release tagged like `v1.0.0-nightly.20260316`.
+The GitHub Actions workflow at `.github/workflows/nightly-release.yml` runs these scripts on a nightly schedule and publishes Linux x64, macOS arm64/x64, and Windows x86/x64 archives under a release tagged like `v1.0.0-nightly.20260316`.
 
 These release archives are intended to be extracted over an existing Oblivion installation. They replace the platform game module and `oblivion.cfg`; they do not replace the original mod data install.
 

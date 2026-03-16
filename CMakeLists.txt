@@ -47,20 +47,23 @@ target_compile_definitions(oblivion_game
 option(OBLIVION_ENABLE_LOCAL_DEPLOY "Copy Windows builds to a local Quake II test install when available" ON)
 set(OBLIVION_LOCAL_DEPLOY_DIR "C:/q2Clean/oblivion-re" CACHE PATH
     "Local Quake II game directory used for optional Windows post-build deployment")
+set(OBLIVION_WINDOWS_OUTPUT_NAME "gamex86" CACHE STRING
+    "Windows game module filename stem")
 
 if(WIN32)
-    if(NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
-        message(FATAL_ERROR
-            "Quake II expects a 32-bit gamex86.dll. Configure CMake for a Win32 build (e.g. -A Win32).")
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8 AND OBLIVION_WINDOWS_OUTPUT_NAME STREQUAL "gamex86")
+        message(STATUS
+            "Building a 64-bit Windows module as gamex86.dll. Override "
+            "OBLIVION_WINDOWS_OUTPUT_NAME if your target engine expects a different DLL basename.")
     endif()
 
     # game.def lists the exports that the engine expects on Windows builds.
     target_sources(oblivion_game PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/game/game.def)
     set_target_properties(oblivion_game PROPERTIES
         PREFIX ""
-        OUTPUT_NAME "gamex86"
-        RUNTIME_OUTPUT_NAME "gamex86"
-        ARCHIVE_OUTPUT_NAME "gamex86"
+        OUTPUT_NAME "${OBLIVION_WINDOWS_OUTPUT_NAME}"
+        RUNTIME_OUTPUT_NAME "${OBLIVION_WINDOWS_OUTPUT_NAME}"
+        ARCHIVE_OUTPUT_NAME "${OBLIVION_WINDOWS_OUTPUT_NAME}"
         SUFFIX ".dll"
     )
 
