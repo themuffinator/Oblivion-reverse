@@ -73,11 +73,28 @@ jobs:
           name: nightly-macos
           path: ${{ steps.package.outputs.archive_path }}
 
+  build-windows:
+    needs: metadata
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: package
+        shell: pwsh
+        env:
+          NIGHTLY_STAMP: ${{ needs.metadata.outputs.nightly_stamp }}
+          RELEASE_TAG: ${{ needs.metadata.outputs.release_tag }}
+        run: ./scripts/release/nightly-windows.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nightly-windows
+          path: ${{ steps.package.outputs.archive_path }}
+
   release:
     needs:
       - metadata
       - build-linux
       - build-macos
+      - build-windows
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -88,7 +105,9 @@ jobs:
       - uses: ncipollo/release-action@v1
         with:
           allowUpdates: true
-          artifacts: release-assets/*.tar.gz
+          artifacts: |
+            release-assets/*.tar.gz
+            release-assets/*.zip
           artifactErrorsFailBuild: true
           body: |
             Automated nightly build for Oblivion Reverse.
@@ -99,7 +118,6 @@ jobs:
             Each archive contains an `oblivion/` folder with the platform game module and `oblivion.cfg`.
           makeLatest: false
           name: ${{ needs.metadata.outputs.release_name }}
-          prerelease: true
           removeArtifacts: true
           replacesArtifacts: true
           tag: ${{ needs.metadata.outputs.release_tag }}

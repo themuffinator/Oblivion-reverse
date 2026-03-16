@@ -32,16 +32,21 @@ The resulting DLL will be emitted as `build/Release/gamex86.dll` for Visual Stud
 
 - The build script automatically includes every `.c` file located in `src/game/` and produces a position-independent shared module named `game`.
 - The Windows build uses the existing `game.def` export definition file so that the exports match the original SDK.
+- If `C:/q2Clean` exists, the default Windows build also copies the produced DLL into `C:/q2Clean/oblivion-re` for local testing. Set `-DOBLIVION_ENABLE_LOCAL_DEPLOY=OFF` to disable that behavior explicitly.
 - You can change the build directory (`build` in the commands above) to any location you prefer.
 - To install the compiled library, run `cmake --install build` and look under `lib/` (Linux/macOS) or `bin/` (Windows) inside the installation prefix.
 
 ## Nightly packaging
 
-Nightly packaging scripts are provided for Linux and macOS:
+Nightly packaging scripts are provided for Linux, macOS, and Windows:
 
 ```bash
 bash scripts/release/nightly-linux.sh
 bash scripts/release/nightly-macos.sh
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/release/nightly-windows.ps1
 ```
 
 Each script:
@@ -49,9 +54,9 @@ Each script:
 - reads the base semantic version from `VERSION`
 - builds a release binary for its platform
 - stages an `oblivion/` folder containing the platform binary plus `pack/oblivion.cfg`
-- writes a versioned `.tar.gz` archive under `dist/`
+- writes a versioned archive under `dist/` (`.tar.gz` on Linux/macOS, `.zip` on Windows)
 
-The GitHub Actions workflow at `.github/workflows/nightly-release.yml` runs these scripts on a nightly schedule and publishes the generated archives as a prerelease tagged like `v0.1.0-nightly.20260316`.
+The GitHub Actions workflow at `.github/workflows/nightly-release.yml` runs these scripts on a nightly schedule and publishes the generated archives as a release tagged like `v0.1.0-nightly.20260316`.
 
 ## Validation
 

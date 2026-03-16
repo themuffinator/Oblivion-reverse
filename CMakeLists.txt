@@ -44,6 +44,10 @@ target_compile_definitions(oblivion_game
         _GNU_SOURCE
 )
 
+option(OBLIVION_ENABLE_LOCAL_DEPLOY "Copy Windows builds to a local Quake II test install when available" ON)
+set(OBLIVION_LOCAL_DEPLOY_DIR "C:/q2Clean/oblivion-re" CACHE PATH
+    "Local Quake II game directory used for optional Windows post-build deployment")
+
 if(WIN32)
     if(NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
         message(FATAL_ERROR
@@ -60,12 +64,15 @@ if(WIN32)
         SUFFIX ".dll"
     )
 
-    add_custom_command(TARGET oblivion_game POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory "C:/q2Clean/oblivion-re"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "$<TARGET_FILE:oblivion_game>"
-            "C:/q2Clean/oblivion-re/$<TARGET_FILE_NAME:oblivion_game>"
-    )
+    get_filename_component(OBLIVION_LOCAL_DEPLOY_PARENT "${OBLIVION_LOCAL_DEPLOY_DIR}" DIRECTORY)
+    if(OBLIVION_ENABLE_LOCAL_DEPLOY AND EXISTS "${OBLIVION_LOCAL_DEPLOY_PARENT}")
+        add_custom_command(TARGET oblivion_game POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${OBLIVION_LOCAL_DEPLOY_DIR}"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "$<TARGET_FILE:oblivion_game>"
+                "${OBLIVION_LOCAL_DEPLOY_DIR}/$<TARGET_FILE_NAME:oblivion_game>"
+        )
+    endif()
 else()
     set_target_properties(oblivion_game PROPERTIES
         PREFIX ""
