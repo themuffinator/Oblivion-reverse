@@ -2,12 +2,6 @@ name: Nightly Release
 
 on:
   workflow_dispatch:
-    inputs:
-      include_legacy_macos_x86:
-        description: "Include the optional self-hosted legacy macOS x86 build"
-        required: false
-        default: false
-        type: boolean
   schedule:
     - cron: "0 3 * * *"
 
@@ -26,14 +20,10 @@ jobs:
       release_name: ${{ steps.vars.outputs.release_name }}
       base_version: ${{ steps.vars.outputs.base_version }}
       nightly_stamp: ${{ steps.vars.outputs.nightly_stamp }}
-      legacy_macos_x86_enabled: ${{ steps.vars.outputs.legacy_macos_x86_enabled }}
-      legacy_macos_x86_runs_on: ${{ steps.vars.outputs.legacy_macos_x86_runs_on }}
     steps:
       - uses: actions/checkout@v4
       - id: vars
         shell: bash
-        env:
-          LEGACY_MACOS_X86_RUNNER_LABELS_JSON: ${{ vars.OBLIVION_MACOS_LEGACY_RUNNER_LABELS_JSON }}
         run: |
           set -euo pipefail
           base_version="$(tr -d '\r\n' < VERSION)"
@@ -50,27 +40,11 @@ jobs:
           fi
           release_tag="v${base_version}-nightly.${nightly_stamp}"
           release_name="${release_prefix} ${release_tag}"
-          legacy_macos_x86_enabled="false"
-          if [[ "${{ vars.OBLIVION_ENABLE_MACOS_LEGACY_X86 }}" == "true" ]]; then
-            legacy_macos_x86_enabled="true"
-          fi
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ github.event.inputs.include_legacy_macos_x86 }}" == "true" ]]; then
-            legacy_macos_x86_enabled="true"
-          fi
-          legacy_macos_x86_runs_on='["ubuntu-latest"]'
-          if [[ "$legacy_macos_x86_enabled" == "true" ]]; then
-            legacy_macos_x86_runs_on="$LEGACY_MACOS_X86_RUNNER_LABELS_JSON"
-            if [[ -z "$legacy_macos_x86_runs_on" ]]; then
-              legacy_macos_x86_runs_on='["self-hosted","macOS","legacy-x86"]'
-            fi
-          fi
           {
             echo "base_version=$base_version"
             echo "nightly_stamp=$nightly_stamp"
             echo "release_tag=$release_tag"
             echo "release_name=$release_name"
-            echo "legacy_macos_x86_enabled=$legacy_macos_x86_enabled"
-            echo "legacy_macos_x86_runs_on=$legacy_macos_x86_runs_on"
           } >> "$GITHUB_OUTPUT"
 
   build-linux:
@@ -124,29 +98,6 @@ jobs:
           name: nightly-macos-${{ matrix.arch }}
           path: ${{ steps.package.outputs.archive_path }}
 
-  build-macos-legacy-x86:
-    needs: metadata
-    runs-on: ${{ fromJSON(needs.metadata.outputs.legacy_macos_x86_runs_on) }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Skip legacy macOS x86 build
-        if: needs.metadata.outputs.legacy_macos_x86_enabled != 'true'
-        run: echo "Legacy macOS x86 build not enabled for this run."
-      - id: package
-        if: needs.metadata.outputs.legacy_macos_x86_enabled == 'true'
-        shell: bash
-        env:
-          NIGHTLY_STAMP: ${{ needs.metadata.outputs.nightly_stamp }}
-          RELEASE_TAG: ${{ needs.metadata.outputs.release_tag }}
-          OBLIVION_ARCH: x86
-          OBLIVION_MACOS_X86_DEPLOYMENT_TARGET: ${{ vars.OBLIVION_MACOS_X86_DEPLOYMENT_TARGET || '10.6' }}
-        run: bash scripts/release/nightly-macos.sh x86
-      - uses: actions/upload-artifact@v4
-        if: needs.metadata.outputs.legacy_macos_x86_enabled == 'true'
-        with:
-          name: nightly-macos-x86
-          path: ${{ steps.package.outputs.archive_path }}
-
   build-windows:
     needs: metadata
     runs-on: windows-latest
@@ -175,7 +126,6 @@ jobs:
       - metadata
       - build-linux
       - build-macos
-      - build-macos-legacy-x86
       - build-windows
     runs-on: ubuntu-latest
     steps:
@@ -198,7 +148,6 @@ jobs:
             Nightly stamp: `${{ needs.metadata.outputs.nightly_stamp }}`
             
             Scheduled runs use a date-only nightly tag. Manual dispatches use a UTC timestamp suffix so each dispatch creates a distinct release.
-            Legacy macOS x86 is built only when the optional self-hosted legacy runner path is enabled.
             Archive names now include both platform and architecture, for example `oblivion-windows-x64-${{ needs.metadata.outputs.release_tag }}.zip`.
             Each archive contains an `oblivion/` folder with the platform game module and `oblivion.cfg`.
           makeLatest: false

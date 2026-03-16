@@ -13,6 +13,8 @@
   <p>
     <a href="#project-goal">Project Goal</a>
     &nbsp;·&nbsp;
+    <a href="#cross-platform">Cross-Platform</a>
+    &nbsp;·&nbsp;
     <a href="#installation">Installation</a>
     &nbsp;·&nbsp;
     <a href="#building-from-source">Build From Source</a>
@@ -52,13 +54,15 @@
 
 <h2>Platform Support</h2>
 
+<h3 id="cross-platform">Cross-Platform And Cross-Arch Builds</h3>
+
 <p>
   The original retail release of <strong>Oblivion</strong> shipped for <strong>Windows only</strong>. This reconstruction project extends that recovered codebase to
-  documented build and runtime support on <strong>Windows</strong>, <strong>Linux</strong>, and <strong>macOS</strong>.
+  documented build and runtime support on <strong>Windows</strong>, <strong>Linux</strong>, and <strong>macOS</strong>, with architecture-specific binaries published per platform.
 </p>
 
 <p>
-  The release automation packages platform-specific binaries for all three targets so an existing Oblivion install can be updated for cross-platform use.
+  The release automation packages platform-and-architecture-specific binaries so an existing Oblivion install can be updated for cross-platform use without guessing which module belongs to which target.
 </p>
 
 <table>
@@ -72,18 +76,18 @@
   <tbody>
     <tr>
       <td>Windows</td>
-      <td><code>gamex86.dll</code></td>
-      <td>Win32 remains the original Quake II target; nightly archives now ship both Win32 and x64 Windows builds.</td>
+      <td><code>gamex86.dll</code> / <code>gamex86_64.dll</code></td>
+      <td>Nightly archives publish both Win32 and x64 Windows binaries with explicit DLL names.</td>
     </tr>
     <tr>
       <td>Linux</td>
-      <td><code>game.so</code></td>
-      <td>Built as a shared module through CMake; nightly archives are published for both <code>x86</code> and <code>x64</code>.</td>
+      <td><code>gamei386.so</code> / <code>gamex86_64.so</code></td>
+      <td>Nightly archives publish both Linux x86 and x64 binaries with explicit architecture suffixes.</td>
     </tr>
     <tr>
       <td>macOS</td>
-      <td><code>game.dylib</code></td>
-      <td>Built as a shared module through CMake; hosted nightly archives are published for <code>arm64</code> and <code>x64</code>, and an optional self-hosted legacy runner can add <code>x86</code>.</td>
+      <td><code>gamearm64.dylib</code> / <code>gamex86_64.dylib</code></td>
+      <td>Nightly archives publish Apple Silicon and Intel macOS binaries with explicit architecture suffixes.</td>
     </tr>
   </tbody>
 </table>
@@ -120,7 +124,9 @@
 <h3>Expected Layout After Extraction</h3>
 
 <pre><code>oblivion/
-  gamex86.dll   or game.so or game.dylib
+  gamex86.dll or gamex86_64.dll
+  gamei386.so or gamex86_64.so
+  gamearm64.dylib or gamex86_64.dylib
   oblivion.cfg
   README.html
 </code></pre>
@@ -145,9 +151,9 @@ cmake --build build
 </code></pre>
 
 <p>The resulting module will be placed in <code>build/</code> as <code>game.so</code> on Linux or <code>game.dylib</code> on macOS.</p>
+<p>Architecture-specific output names are used for cross-platform builds: Linux emits <code>gamei386.so</code> or <code>gamex86_64.so</code>, and macOS emits <code>gamearm64.dylib</code> or <code>gamex86_64.dylib</code>.</p>
 <p>To force a 32-bit Linux build on an x64 host, add <code>-DCMAKE_C_FLAGS=-m32 -DCMAKE_SHARED_LINKER_FLAGS=-m32</code> when configuring and make sure your toolchain has multilib support installed.</p>
 <p>To force an x64 macOS build on Apple Silicon, add <code>-DCMAKE_OSX_ARCHITECTURES=x86_64</code> when configuring.</p>
-<p>True macOS <code>x86</code> builds require a separate self-hosted legacy macOS runner; the nightly workflow can target that runner when enabled.</p>
 
 <h3>Windows</h3>
 
@@ -156,10 +162,10 @@ cmake --build build --config Release
 </code></pre>
 
 <p>
-  The resulting module will be emitted as <code>build/Release/gamex86.dll</code> for Visual Studio generators,
+  The Win32 module will be emitted as <code>build/Release/gamex86.dll</code> for Visual Studio generators,
   or <code>build/gamex86.dll</code> for single-config generators.
 </p>
-<p>To produce the additional x64 Windows build, configure with <code>-A x64</code> instead. Windows builds still default to the historical <code>gamex86.dll</code> basename; set <code>-DOBLIVION_WINDOWS_OUTPUT_NAME=&lt;name&gt;</code> if your target source port expects a different x64 DLL name.</p>
+<p>To produce the x64 Windows build, configure with <code>-A x64</code>; it will emit <code>gamex86_64.dll</code> by default. Set <code>-DOBLIVION_WINDOWS_OUTPUT_NAME=&lt;name&gt;</code> only if your target source port expects a different DLL name.</p>
 
 <h3>Install A Local Build</h3>
 
@@ -178,7 +184,6 @@ cmake --build build --config Release
   Archive names include both platform and architecture, for example <code>oblivion-windows-x64-v1.0.0-nightly.20260316.zip</code>.
   Scheduled nightly tags use the format <code>v&lt;base-version&gt;-nightly.YYYYMMDD</code>. Manual workflow dispatches append a UTC time suffix such as <code>v1.0.0-nightly.20260316.205724</code> so each dispatch creates a distinct release.
 </p>
-<p>The optional legacy macOS <code>x86</code> nightly is disabled by default and is intended for a self-hosted runner labeled <code>self-hosted</code>, <code>macOS</code>, and <code>legacy-x86</code> unless overridden through repository variables.</p>
 
 <p>
   The current base version is <code>1.0.0</code>, reflecting a mature reconstruction state rather than an early bootstrap snapshot.

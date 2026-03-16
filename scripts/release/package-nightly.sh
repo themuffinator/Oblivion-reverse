@@ -71,10 +71,6 @@ case "$platform" in
 		;;
 	macos)
 		case "$arch" in
-			x86)
-				configure_args+=(-DCMAKE_OSX_ARCHITECTURES=i386)
-				configure_args+=(-DCMAKE_OSX_DEPLOYMENT_TARGET="${OBLIVION_MACOS_X86_DEPLOYMENT_TARGET:-10.6}")
-				;;
 			x64)
 				configure_args+=(-DCMAKE_OSX_ARCHITECTURES=x86_64)
 				;;
@@ -82,7 +78,7 @@ case "$platform" in
 				configure_args+=(-DCMAKE_OSX_ARCHITECTURES=arm64)
 				;;
 			*)
-				echo "macos nightly packaging supports x86, x64, or arm64" >&2
+				echo "macos nightly packaging supports x64 or arm64" >&2
 				exit 1
 				;;
 		esac

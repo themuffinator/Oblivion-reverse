@@ -47,14 +47,59 @@ target_compile_definitions(oblivion_game
 option(OBLIVION_ENABLE_LOCAL_DEPLOY "Copy Windows builds to a local Quake II test install when available" ON)
 set(OBLIVION_LOCAL_DEPLOY_DIR "C:/q2Clean/oblivion-re" CACHE PATH
     "Local Quake II game directory used for optional Windows post-build deployment")
-set(OBLIVION_WINDOWS_OUTPUT_NAME "gamex86" CACHE STRING
-    "Windows game module filename stem")
+set(OBLIVION_TARGET_ARCH "" CACHE STRING
+    "Target architecture label (x86, x64, arm64); inferred automatically when left empty")
+set(OBLIVION_WINDOWS_OUTPUT_NAME "" CACHE STRING
+    "Windows game module filename stem; inferred from OBLIVION_TARGET_ARCH when left empty")
+
+if(OBLIVION_TARGET_ARCH STREQUAL "")
+    if(WIN32)
+        if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+            set(OBLIVION_TARGET_ARCH "x64")
+        else()
+            set(OBLIVION_TARGET_ARCH "x86")
+        endif()
+    elseif(APPLE)
+        if(CMAKE_OSX_ARCHITECTURES)
+            list(GET CMAKE_OSX_ARCHITECTURES 0 OBLIVION_OSX_ARCH)
+        else()
+            set(OBLIVION_OSX_ARCH "${CMAKE_SYSTEM_PROCESSOR}")
+        endif()
+
+        if(OBLIVION_OSX_ARCH MATCHES "^(x86_64|amd64)$")
+            set(OBLIVION_TARGET_ARCH "x64")
+        elseif(OBLIVION_OSX_ARCH MATCHES "^(arm64|aarch64)$")
+            set(OBLIVION_TARGET_ARCH "arm64")
+        elseif(OBLIVION_OSX_ARCH MATCHES "^(i[3-6]86|x86)$")
+            set(OBLIVION_TARGET_ARCH "x86")
+        endif()
+    else()
+        if(CMAKE_C_FLAGS MATCHES "(^| )-m32($| )" OR CMAKE_SHARED_LINKER_FLAGS MATCHES "(^| )-m32($| )")
+            set(OBLIVION_TARGET_ARCH "x86")
+        elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64)$")
+            set(OBLIVION_TARGET_ARCH "x64")
+        elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(arm64|aarch64)$")
+            set(OBLIVION_TARGET_ARCH "arm64")
+        elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(i[3-6]86|x86)$")
+            set(OBLIVION_TARGET_ARCH "x86")
+        endif()
+    endif()
+endif()
+
+if(OBLIVION_TARGET_ARCH STREQUAL "")
+    message(FATAL_ERROR
+        "Unable to infer OBLIVION_TARGET_ARCH. Set -DOBLIVION_TARGET_ARCH=x86|x64|arm64 explicitly.")
+endif()
 
 if(WIN32)
-    if(CMAKE_SIZEOF_VOID_P EQUAL 8 AND OBLIVION_WINDOWS_OUTPUT_NAME STREQUAL "gamex86")
-        message(STATUS
-            "Building a 64-bit Windows module as gamex86.dll. Override "
-            "OBLIVION_WINDOWS_OUTPUT_NAME if your target engine expects a different DLL basename.")
+    if(OBLIVION_WINDOWS_OUTPUT_NAME STREQUAL "")
+        if(OBLIVION_TARGET_ARCH STREQUAL "x64")
+            set(OBLIVION_WINDOWS_OUTPUT_NAME "gamex86_64")
+        elseif(OBLIVION_TARGET_ARCH STREQUAL "x86")
+            set(OBLIVION_WINDOWS_OUTPUT_NAME "gamex86")
+        else()
+            set(OBLIVION_WINDOWS_OUTPUT_NAME "game${OBLIVION_TARGET_ARCH}")
+        endif()
     endif()
 
     # game.def lists the exports that the engine expects on Windows builds.
@@ -77,9 +122,19 @@ if(WIN32)
         )
     endif()
 else()
+    if(OBLIVION_TARGET_ARCH STREQUAL "x64")
+        set(OBLIVION_UNIX_OUTPUT_NAME "gamex86_64")
+    elseif(OBLIVION_TARGET_ARCH STREQUAL "x86")
+        set(OBLIVION_UNIX_OUTPUT_NAME "gamei386")
+    elseif(OBLIVION_TARGET_ARCH STREQUAL "arm64")
+        set(OBLIVION_UNIX_OUTPUT_NAME "gamearm64")
+    else()
+        set(OBLIVION_UNIX_OUTPUT_NAME "game${OBLIVION_TARGET_ARCH}")
+    endif()
+
     set_target_properties(oblivion_game PROPERTIES
         PREFIX ""
-        OUTPUT_NAME "game"
+        OUTPUT_NAME "${OBLIVION_UNIX_OUTPUT_NAME}"
     )
 
     if(APPLE)

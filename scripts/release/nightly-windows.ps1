@@ -7,7 +7,13 @@ $ErrorActionPreference = 'Stop'
 
 $rootDir = Resolve-Path (Join-Path $PSScriptRoot '..\..')
 $versionFile = Join-Path $rootDir 'VERSION'
-$moduleName = if ($env:OBLIVION_WINDOWS_OUTPUT_NAME) { $env:OBLIVION_WINDOWS_OUTPUT_NAME } else { 'gamex86' }
+$moduleName = if ($env:OBLIVION_WINDOWS_OUTPUT_NAME) {
+    $env:OBLIVION_WINDOWS_OUTPUT_NAME
+} elseif ($Arch -eq 'x64') {
+    'gamex86_64'
+} else {
+    'gamex86'
+}
 $generatorPlatform = if ($Arch -eq 'x64') { 'x64' } else { 'Win32' }
 
 if (-not (Test-Path $versionFile)) {
@@ -27,7 +33,7 @@ $stageDir = Join-Path $distRoot 'oblivion'
 $archiveName = "oblivion-windows-$Arch-$releaseTag.zip"
 $archivePath = Join-Path (Join-Path $rootDir 'dist') $archiveName
 
-cmake -S $rootDir -B $buildDir -A $generatorPlatform -DCMAKE_BUILD_TYPE=Release -DOBLIVION_ENABLE_LOCAL_DEPLOY=OFF "-DOBLIVION_WINDOWS_OUTPUT_NAME=$moduleName"
+cmake -S $rootDir -B $buildDir -A $generatorPlatform -DCMAKE_BUILD_TYPE=Release -DOBLIVION_ENABLE_LOCAL_DEPLOY=OFF "-DOBLIVION_TARGET_ARCH=$Arch" "-DOBLIVION_WINDOWS_OUTPUT_NAME=$moduleName"
 cmake --build $buildDir --config Release
 
 $candidates = @(
