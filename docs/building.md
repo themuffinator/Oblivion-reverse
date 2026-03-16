@@ -21,11 +21,27 @@ cmake --build build
 
 The resulting shared object is placed in `build/` as `game.so` (or `game.dylib` on macOS).
 
+To build the additional Linux x86 variant on an x64 host:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y gcc-multilib libc6-dev-i386
+cmake -S . -B build-x86 -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS=-m32 -DCMAKE_SHARED_LINKER_FLAGS=-m32
+cmake --build build-x86
+```
+
 To force an x64 macOS build on Apple Silicon, configure with:
 
 ```bash
 cmake -S . -B build-x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=x86_64
 cmake --build build-x64
+```
+
+To build a true macOS x86 variant, use a legacy self-hosted macOS runner or machine with an i386-capable Apple toolchain and configure with:
+
+```bash
+cmake -S . -B build-x86 -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=i386 -DCMAKE_OSX_DEPLOYMENT_TARGET=10.6
+cmake --build build-x86
 ```
 
 ## Configure and build (Windows)
@@ -59,7 +75,9 @@ Windows builds still default to the historical `gamex86.dll` basename. If your t
 Nightly packaging scripts are provided for Linux, macOS, and Windows:
 
 ```bash
+bash scripts/release/nightly-linux.sh x86
 bash scripts/release/nightly-linux.sh x64
+bash scripts/release/nightly-macos.sh x86
 bash scripts/release/nightly-macos.sh arm64
 bash scripts/release/nightly-macos.sh x64
 ```
@@ -74,9 +92,16 @@ Each script:
 - reads the base semantic version from `VERSION`
 - builds a release binary for its requested platform/architecture pair
 - stages an `oblivion/` folder containing the platform binary, `pack/oblivion.cfg`, and `README.html`
-- writes a versioned archive under `dist/` (`.tar.gz` on Linux/macOS, `.zip` on Windows) with names such as `oblivion-macos-x64-v1.0.0-nightly.20260316.tar.gz`
+- writes a versioned archive under `dist/` (`.tar.gz` on Linux/macOS, `.zip` on Windows) with names such as `oblivion-linux-x86-v1.0.0-nightly.20260316.tar.gz`
 
-The GitHub Actions workflow at `.github/workflows/nightly-release.yml` runs these scripts on a nightly schedule and publishes Linux x64, macOS arm64/x64, and Windows x86/x64 archives under a release tagged like `v1.0.0-nightly.20260316`. Manual workflow dispatches use a UTC timestamped tag such as `v1.0.0-nightly.20260316.205724` so same-day manual runs do not overwrite the scheduled nightly release.
+The GitHub Actions workflow at `.github/workflows/nightly-release.yml` runs these scripts on a nightly schedule and publishes Linux x86/x64, macOS arm64/x64, and Windows x86/x64 archives under a release tagged like `v1.0.0-nightly.20260316`. An optional self-hosted legacy macOS x86 job is also available. Manual workflow dispatches use a UTC timestamped tag such as `v1.0.0-nightly.20260316.205724` so same-day manual runs do not overwrite the scheduled nightly release.
+
+To enable the legacy macOS x86 workflow lane:
+
+- Set repository variable `OBLIVION_ENABLE_MACOS_LEGACY_X86=true` to include it on scheduled runs.
+- Or use the `include_legacy_macos_x86` checkbox on manual workflow dispatches.
+- If your runner labels differ from the default `["self-hosted","macOS","legacy-x86"]`, set repository variable `OBLIVION_MACOS_LEGACY_RUNNER_LABELS_JSON` to a JSON array string.
+- If the legacy toolchain requires a different deployment target than `10.6`, set repository variable `OBLIVION_MACOS_X86_DEPLOYMENT_TARGET`.
 
 These release archives are intended to be extracted over an existing Oblivion installation. They replace the platform game module and `oblivion.cfg`; they do not replace the original mod data install.
 

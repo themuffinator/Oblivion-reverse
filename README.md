@@ -78,12 +78,12 @@
     <tr>
       <td>Linux</td>
       <td><code>game.so</code></td>
-      <td>Built as a shared module through CMake; nightly archives are published as explicit <code>linux-x64</code> builds.</td>
+      <td>Built as a shared module through CMake; nightly archives are published for both <code>x86</code> and <code>x64</code>.</td>
     </tr>
     <tr>
       <td>macOS</td>
       <td><code>game.dylib</code></td>
-      <td>Built as a shared module through CMake; nightly archives are published for both <code>arm64</code> and <code>x64</code>.</td>
+      <td>Built as a shared module through CMake; hosted nightly archives are published for <code>arm64</code> and <code>x64</code>, and an optional self-hosted legacy runner can add <code>x86</code>.</td>
     </tr>
   </tbody>
 </table>
@@ -145,7 +145,9 @@ cmake --build build
 </code></pre>
 
 <p>The resulting module will be placed in <code>build/</code> as <code>game.so</code> on Linux or <code>game.dylib</code> on macOS.</p>
+<p>To force a 32-bit Linux build on an x64 host, add <code>-DCMAKE_C_FLAGS=-m32 -DCMAKE_SHARED_LINKER_FLAGS=-m32</code> when configuring and make sure your toolchain has multilib support installed.</p>
 <p>To force an x64 macOS build on Apple Silicon, add <code>-DCMAKE_OSX_ARCHITECTURES=x86_64</code> when configuring.</p>
+<p>True macOS <code>x86</code> builds require a separate self-hosted legacy macOS runner; the nightly workflow can target that runner when enabled.</p>
 
 <h3>Windows</h3>
 
@@ -176,6 +178,7 @@ cmake --build build --config Release
   Archive names include both platform and architecture, for example <code>oblivion-windows-x64-v1.0.0-nightly.20260316.zip</code>.
   Scheduled nightly tags use the format <code>v&lt;base-version&gt;-nightly.YYYYMMDD</code>. Manual workflow dispatches append a UTC time suffix such as <code>v1.0.0-nightly.20260316.205724</code> so each dispatch creates a distinct release.
 </p>
+<p>The optional legacy macOS <code>x86</code> nightly is disabled by default and is intended for a self-hosted runner labeled <code>self-hosted</code>, <code>macOS</code>, and <code>legacy-x86</code> unless overridden through repository variables.</p>
 
 <p>
   The current base version is <code>1.0.0</code>, reflecting a mature reconstruction state rather than an early bootstrap snapshot.
