@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="docs/assets/banner.png" alt="Oblivion Reverse Banner" width="100%">
+  <img src="docs/assets/banner.png" alt="Oblivion Reconstructed Banner" width="100%">
 
-  <h1>Oblivion Reverse</h1>
+  <h1>Oblivion Reconstructed</h1>
   <p><strong>An accurate reconstruction of the original Oblivion Quake II mod source code, bugs and all.</strong></p>
 
   <p>
