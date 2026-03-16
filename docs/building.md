@@ -2,6 +2,8 @@
 
 This repository now ships with a CMake build that targets the Quake II game DLL/SO located under `src/game/`.
 
+The repository version is stored in the top-level `VERSION` file and is used by the nightly packaging workflow.
+
 ## Prerequisites
 
 - A C11-capable compiler (tested with GCC 11.4 on Ubuntu 22.04)
@@ -24,7 +26,7 @@ cmake -S . -B build
 cmake --build build --config Release
 ```
 
-The resulting DLL will be emitted as `build/Release/game.dll`.
+The resulting DLL will be emitted as `build/Release/gamex86.dll` for Visual Studio generators, or `build/gamex86.dll` for single-config generators.
 
 ### Notes
 
@@ -32,6 +34,24 @@ The resulting DLL will be emitted as `build/Release/game.dll`.
 - The Windows build uses the existing `game.def` export definition file so that the exports match the original SDK.
 - You can change the build directory (`build` in the commands above) to any location you prefer.
 - To install the compiled library, run `cmake --install build` and look under `lib/` (Linux/macOS) or `bin/` (Windows) inside the installation prefix.
+
+## Nightly packaging
+
+Nightly packaging scripts are provided for Linux and macOS:
+
+```bash
+bash scripts/release/nightly-linux.sh
+bash scripts/release/nightly-macos.sh
+```
+
+Each script:
+
+- reads the base semantic version from `VERSION`
+- builds a release binary for its platform
+- stages an `oblivion/` folder containing the platform binary plus `pack/oblivion.cfg`
+- writes a versioned `.tar.gz` archive under `dist/`
+
+The GitHub Actions workflow at `.github/workflows/nightly-release.yml` runs these scripts on a nightly schedule and publishes the generated archives as a prerelease tagged like `v0.1.0-nightly.20260316`.
 
 ## Validation
 

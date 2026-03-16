@@ -1,5 +1,14 @@
 cmake_minimum_required(VERSION 3.16)
-project(oblivion_game C)
+
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" OBLIVION_VERSION
+    LIMIT_COUNT 1
+    REGEX "^[0-9]+\.[0-9]+\.[0-9]+$")
+
+if(OBLIVION_VERSION STREQUAL "")
+    message(FATAL_ERROR "VERSION must contain a semantic version like 0.1.0")
+endif()
+
+project(oblivion_game VERSION ${OBLIVION_VERSION} LANGUAGES C)
 
 # Ship a release-configured build by default so the produced DLL matches
 # the original Quake II release binaries unless the user explicitly asks
@@ -62,6 +71,12 @@ else()
         PREFIX ""
         OUTPUT_NAME "game"
     )
+
+    if(APPLE)
+        set_target_properties(oblivion_game PROPERTIES
+            SUFFIX ".dylib"
+        )
+    endif()
 endif()
 
 install(TARGETS oblivion_game
